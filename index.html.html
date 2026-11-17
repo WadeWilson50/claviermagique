@@ -1,0 +1,3416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f59e0b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ClavierMagique">
+    <title>ClavierMagique - Apprends à taper en t'amusant !</title>
+    <!-- Icône Renard intégrée pour onglet navigateur, bureau et mobile -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='100%25' stop-color='%23ea580c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E%3Ctext x='256' y='345' font-size='300' text-anchor='middle'%3E%F0%9F%A6%8A%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='100%25' stop-color='%23ea580c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E%3Ctext x='256' y='345' font-size='300' text-anchor='middle'%3E%F0%9F%A6%8A%3C/text%3E%3C/svg%3E">
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Police ludique et très lisible pour les enfants -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #fef3c7 100%);
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .font-mono-key {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animations ludiques */
+        @keyframes bounce-gentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-bounce-gentle {
+            animation: bounce-gentle 2.5s infinite ease-in-out;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.85); opacity: 0; }
+            70% { transform: scale(1.04); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: pop-in 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            50% { transform: translateX(6px); }
+            75% { transform: translateX(-4px); }
+        }
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        /* Style des touches du clavier 3D enfantin */
+        .key-cap {
+            transition: all 0.08s ease;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
+            border-bottom-width: 2px;
+        }
+        .key-cap:active, .key-pressed {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+        }
+        .key-target {
+            transform: translateY(-3px) scale(1.06);
+            box-shadow: 0 6px 12px rgba(245, 158, 11, 0.45), 0 4px 0 rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        /* Couleurs par doigt (Code pédagogique) */
+        .finger-pinky-l  { background-color: #fda4af; border-color: #f43f5e; color: #881337; }
+        .finger-ring-l   { background-color: #fdba74; border-color: #f97316; color: #7c2d12; }
+        .finger-middle-l { background-color: #fde047; border-color: #eab308; color: #713f12; }
+        .finger-index-l  { background-color: #86efac; border-color: #22c55e; color: #14532d; }
+        .finger-index-r  { background-color: #67e8f9; border-color: #06b6d4; color: #164e63; }
+        .finger-middle-r { background-color: #93c5fd; border-color: #3b82f6; color: #1e3a8a; }
+        .finger-ring-r   { background-color: #c4b5fd; border-color: #8b5cf6; color: #4c1d95; }
+        .finger-pinky-r  { background-color: #f0abfc; border-color: #d946ef; color: #701a75; }
+        .finger-thumb    { background-color: #e2e8f0; border-color: #94a3b8; color: #334155; }
+
+        /* Carte des mondes */
+        .level-card {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+        }
+        .level-card:hover:not(:disabled) {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        /* Canvas Arcade & Mini-jeux */
+        #arcade-canvas {
+            background: linear-gradient(180deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+            border-radius: 1.5rem;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.4);
+        }
+
+        #trial-canvas {
+            border-radius: 1.25rem;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.12);
+        }
+
+        @keyframes screen-shake-bomb {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            15% { transform: translate(-10px, 6px) rotate(-1deg); }
+            30% { transform: translate(10px, -6px) rotate(1deg); }
+            45% { transform: translate(-8px, -4px) rotate(-0.5deg); }
+            60% { transform: translate(8px, 4px) rotate(0.5deg); }
+            75% { transform: translate(-4px, 2px) rotate(0deg); }
+        }
+        .animate-bomb-shake {
+            animation: screen-shake-bomb 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+
+        /* Mode calme par défaut : désactive les animations de saisie (secousse, zoom touche/lettre, pop-in mots) */
+        body.no-typing-animations .key-cap,
+        body.no-typing-animations .typing-char-box {
+            transition: none !important;
+            transform: none !important;
+        }
+        body.no-typing-animations .animate-shake,
+        body.no-typing-animations .animate-pop-in {
+            animation: none !important;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col justify-between no-typing-animations">
+
+    <!-- ================= BARRE DE NAVIGATION SUPÉRIEURE ================= -->
+    <header class="bg-white/90 backdrop-blur-md border-b-4 border-sky-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Logo & Titre -->
+            <button onclick="showView('map')" class="flex items-center gap-3 group focus:outline-none">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white text-2xl shadow-md border-b-4 border-orange-600 group-hover:rotate-6 transition-transform">
+                    🦊
+                </div>
+                <div class="text-left">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent leading-none">
+                        ClavierMagique
+                    </h1>
+                    <p class="text-xs font-medium text-slate-500 mt-0.5">9 Mondes • 27 Épreuves • Collection</p>
+                </div>
+            </button>
+
+            <!-- Contrôles & Compteur d'étoiles -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <!-- Bouton Installation WebApp -->
+                <button onclick="installWebApp()" id="btn-install-pwa" title="Installer ClavierMagique sur le bureau" class="hidden bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-3.5 py-2 rounded-2xl shadow-md border-b-4 border-orange-600 active:translate-y-0.5 transition flex items-center gap-1.5 text-xs sm:text-sm animate-bounce-gentle">
+                    <span>📲</span>
+                    <span>Installer l'appli</span>
+                </button>
+
+                <!-- Bouton Profil Actif -->
+                <button onclick="openProfileModal()" id="btn-active-profile" title="Changer ou gérer les profils d'enfants" class="bg-indigo-50 hover:bg-indigo-100 border-2 border-indigo-300 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-sm transition group">
+                    <span id="header-profile-avatar" class="text-xl group-hover:scale-110 transition-transform">🦊</span>
+                    <div class="text-left leading-tight">
+                        <div class="text-[10px] font-bold uppercase text-indigo-400">Joueur</div>
+                        <div id="header-profile-name" class="font-bold text-indigo-900 text-sm max-w-[95px] truncate">Invité</div>
+                    </div>
+                    <span class="text-xs text-indigo-400 ml-0.5">▼</span>
+                </button>
+
+                <!-- Bouton Album, Trophées, Vignettes & Diplômes -->
+                <button onclick="openTrophiesModal()" title="Voir mes vignettes collector, avatars, badges et diplômes" class="bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 px-3.5 py-1.5 rounded-2xl flex items-center gap-2 shadow-inner transition">
+                    <span class="text-xl">⭐</span>
+                    <span id="total-stars-display" class="font-bold text-amber-800 text-lg">0 / 81</span>
+                    <span class="text-base hidden sm:inline">🏆</span>
+                </button>
+
+                <!-- Bouton Mode Arcade -->
+                <button onclick="showView('arcade')" id="btn-nav-arcade" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-4 py-2 rounded-2xl shadow-md border-b-4 border-purple-700 active:translate-y-0.5 transition flex items-center gap-2 text-sm sm:text-base">
+                    <span>🚀</span>
+                    <span class="hidden sm:inline">Jeu Arcade</span>
+                </button>
+
+                <!-- Bouton Mode Administrateur (Débloque toutes les épreuves pour tester) -->
+                <button onclick="toggleAdminMode()" id="btn-admin-mode" title="Mode Administrateur : débloque immédiatement tous les mondes et les 27 épreuves pour tester" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold px-3 py-2 rounded-2xl border-2 border-rose-300 text-xs sm:text-sm transition flex items-center gap-1.5 shadow-sm">
+                    <span>🔑</span>
+                    <span>Admin</span>
+                    <span id="btn-admin-state" class="px-1.5 py-0.5 rounded-lg bg-white text-rose-800 text-[11px]">OFF</span>
+                </button>
+
+                <!-- Bascule AZERTY / QWERTY -->
+                <button onclick="toggleLayout()" id="btn-layout" title="Changer de disposition de clavier" class="bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-3 py-2 rounded-2xl border-2 border-sky-300 text-sm transition">
+                    AZERTY
+                </button>
+
+                <!-- Bouton Animations de saisie -->
+                <button onclick="toggleTypingAnimations()" id="btn-animations" title="Activer ou désactiver les animations lors de la saisie" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-3 py-2 rounded-2xl border-2 border-slate-300 text-xs sm:text-sm transition flex items-center gap-1">
+                    <span>✨</span>
+                    <span class="hidden md:inline">Anim.</span>
+                    <span id="btn-animations-state">OFF</span>
+                </button>
+
+                <!-- Bouton Son -->
+                <button onclick="toggleSound()" id="btn-sound" title="Activer/Désactiver les sons" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 p-2.5 rounded-2xl border-2 border-emerald-300 transition text-lg leading-none">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================= CONTENU PRINCIPAL ================= -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6">
+
+        <!-- ==================== VUE 1 : CARTE DES 9 MONDES ==================== -->
+        <section id="view-map" class="animate-pop-in">
+            <!-- Bannière Mascotte Bienvenue -->
+            <div id="welcome-banner" class="bg-white rounded-3xl p-5 sm:p-6 mb-6 border-4 border-sky-200 shadow-lg flex flex-col sm:flex-row items-center gap-5 relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-32 h-32 bg-amber-100 rounded-full opacity-50 pointer-events-none"></div>
+                <div id="welcome-avatar-badge" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-b from-amber-300 to-orange-400 flex items-center justify-center text-5xl sm:text-6xl shadow-md border-b-4 border-orange-500 shrink-0 animate-bounce-gentle">
+                    🦊
+                </div>
+                <div class="text-center sm:text-left flex-grow">
+                    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                        <span class="inline-block bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1 rounded-full">TON GUIDE : LÉO LE RENARD</span>
+                        <span id="welcome-arcade-record" class="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">🏆 Record Arcade : 0 pts</span>
+                    </div>
+                    <h2 id="welcome-heading" class="text-2xl sm:text-3xl font-bold text-slate-800">Bonjour jeune aventurier ! Prêt à explorer les 9 mondes ?</h2>
+                    <p class="text-slate-600 mt-1 text-sm sm:text-base">Chaque monde contient <strong>3 épreuves</strong> (⌨️ Clavier, 🐒 Petit Singe, 🤠 Cow-boy). Termine un monde pour gagner un <strong>nouvel avatar</strong> et une <strong>vignette collector</strong> !</p>
+                </div>
+                <div class="flex flex-col gap-2 shrink-0 self-center sm:self-start">
+                    <button onclick="openTrophiesModal()" class="text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-1.5 rounded-xl border border-amber-300 transition">
+                        🏆 Album & Vignettes
+                    </button>
+                    <button onclick="openProfileModal()" class="text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-200 transition">
+                        👨‍👩‍👧‍👦 Profils & Sauvegarde
+                    </button>
+                    <button onclick="toggleAdminMode()" id="btn-banner-admin" class="text-xs font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-xl border border-rose-300 transition">
+                        🔑 Mode Admin : OFF
+                    </button>
+                    <button onclick="resetProgressModal()" class="text-xs text-slate-400 hover:text-rose-500 underline text-center">
+                        Réinitialiser ce profil
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barre de progression des récompenses & collections -->
+            <div id="rewards-summary-bar" class="bg-white/90 rounded-2xl p-3.5 mb-6 border-2 border-amber-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <span>🎁</span>
+                    <span>Ta Collection :</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs font-extrabold">
+                    <span class="px-3 py-1 rounded-xl bg-pink-50 text-pink-800 border border-pink-200 flex items-center gap-1.5">
+                        🖼️ <span id="count-stickers">0 / 9</span> Vignette(s)
+                    </span>
+                    <span class="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                        🎭 <span id="count-avatars">8</span> Avatar(s)
+                    </span>
+                    <span class="px-3 py-1 rounded-xl bg-sky-50 text-sky-800 border border-sky-200 flex items-center gap-1.5">
+                        🏅 <span id="count-badges">0</span> Badge(s)
+                    </span>
+                    <span class="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+                        👑 <span id="count-crowns">0</span> Couronne(s)
+                    </span>
+                    <span class="px-3 py-1 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-1.5">
+                        📜 <span id="count-diplomas">0</span> Diplôme(s)
+                    </span>
+                    <button onclick="openTrophiesModal()" class="px-3 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-slate-900 shadow-sm transition">
+                        Ouvrir mon album ✨
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grille des 9 Mondes -->
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-700 flex items-center gap-2">
+                    <span>🗺️</span> Les 9 Mondes de ClavierMagique
+                </h3>
+                <span class="text-sm font-medium text-slate-500">Clique sur un monde pour choisir son épreuve !</span>
+            </div>
+
+            <div id="levels-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Généré dynamiquement par JS -->
+            </div>
+        </section>
+
+        <!-- ==================== VUE 2 : LEÇON & ÉPREUVES (CLAVIER / SINGE / COW-BOY) ==================== -->
+        <section id="view-lesson" class="hidden animate-pop-in">
+            <!-- Barre supérieure de la leçon -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="showView('map')" class="bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center gap-2 transition">
+                        <span>⬅️</span> Mondes
+                    </button>
+                    <button id="btn-lesson-teacher-config" onclick="openTeacherModal()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3.5 py-2 rounded-2xl border-b-4 border-indigo-800 shadow-sm flex items-center gap-1.5 text-sm transition">
+                        <span>✏️</span> Configurer
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <span id="lesson-badge" class="text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">Monde 1</span>
+                    <h2 id="lesson-title" class="text-xl sm:text-2xl font-bold text-slate-800 mt-0.5">Nature & Prairie</h2>
+                </div>
+
+                <!-- Statistiques en direct -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-white px-3.5 py-1.5 rounded-2xl border-2 border-emerald-200 text-center shadow-sm">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Vitesse</div>
+                        <div class="font-bold text-emerald-600 text-lg leading-tight"><span id="stat-wpm">0</span> <span class="text-xs">MPM</span></div>
+                    </div>
+                    <div class="bg-white px-3.5 py-1.5 rounded-2xl border-2 border-sky-200 text-center shadow-sm">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Précision</div>
+                        <div class="font-bold text-sky-600 text-lg leading-tight"><span id="stat-acc">100</span>%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sélecteur des 3 épreuves de la série -->
+            <div id="trial-selector-bar" class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+                <!-- Généré dynamiquement par JS -->
+            </div>
+
+            <!-- Barre de progression de l'épreuve -->
+            <div class="w-full bg-white h-4 rounded-full p-1 border-2 border-slate-200 mb-4 shadow-inner">
+                <div id="lesson-progress-bar" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full rounded-full transition-all duration-200" style="width: 0%"></div>
+            </div>
+
+            <!-- Zone d'affichage de la mascotte + consigne doigt + scène interactive -->
+            <div class="bg-white rounded-3xl p-4 sm:p-5 border-4 border-indigo-100 shadow-lg mb-4 relative">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 mb-3 border-b-2 border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span id="mascot-lesson-emoji" class="text-4xl">🦊</span>
+                        <p id="mascot-lesson-tip" class="text-sm sm:text-base font-medium text-slate-600 bg-amber-50 px-4 py-2 rounded-2xl border border-amber-200">
+                            Appuie sur la touche qui brille !
+                        </p>
+                    </div>
+                    <!-- Indicateur de doigt recommandé -->
+                    <div id="finger-guide-pill" class="px-4 py-1.5 rounded-2xl font-bold text-sm border-2 shadow-sm flex items-center gap-2 bg-slate-100 border-slate-300 text-slate-700">
+                        <span>✋</span>
+                        <span id="finger-name-display">Index gauche</span>
+                    </div>
+                </div>
+
+                <!-- Scène visuelle pour Épreuve 2 (Petit Singe) et Épreuve 3 (Cow-boy) -->
+                <div id="trial-visual-stage" class="hidden mb-4">
+                    <canvas id="trial-canvas" class="w-full h-[210px] sm:h-[235px] block"></canvas>
+                </div>
+
+                <!-- Zone de texte à taper (Typewriter Display) -->
+                <div id="typing-container" class="min-h-[100px] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 cursor-text" onclick="focusHiddenInput()">
+                    <!-- Les lettres sont générées ici -->
+                </div>
+
+                <!-- Champ invisible pour capturer aussi le clavier mobile/tablette -->
+                <input type="text" id="mobile-hidden-input" class="opacity-0 absolute pointer-events-none h-0 w-0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            </div>
+
+            <!-- Clavier Virtuel Interactif Coloré -->
+            <div class="bg-white/95 rounded-3xl p-3 sm:p-4 border-4 border-slate-200 shadow-xl max-w-4xl mx-auto">
+                <div id="virtual-keyboard" class="flex flex-col gap-1.5 sm:gap-2 select-none">
+                    <!-- Rangées générées dynamiquement -->
+                </div>
+
+                <!-- Légende des couleurs des doigts -->
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap justify-center gap-2 text-xs font-semibold">
+                    <span class="px-2.5 py-1 rounded-lg finger-pinky-l">Auriculaire G</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-ring-l">Annulaire G</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-middle-l">Majeur G</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-index-l">Index G</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-thumb">Pouces (Espace)</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-index-r">Index D</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-middle-r">Majeur D</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-ring-r">Annulaire D</span>
+                    <span class="px-2.5 py-1 rounded-lg finger-pinky-r">Auriculaire D</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VUE 3 : MINI-JEU ARCADE (PLUIE DE MÉTÉORES APAISÉE) ==================== -->
+        <section id="view-arcade" class="hidden animate-pop-in">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <button onclick="exitArcade()" class="bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center gap-2">
+                    <span>⬅️</span> Retour aux mondes
+                </button>
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-purple-900">🚀 Pluie d'Étoiles Cosmiques</h2>
+                    <p class="text-xs sm:text-sm text-slate-600">60 secondes chrono à rythme doux ! Attention aux bombes si tu rates une lettre 💥</p>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+                    <!-- Chronomètre 1 minute -->
+                    <div id="arcade-timer-box" class="bg-white px-4 py-1.5 rounded-2xl border-2 border-amber-300 font-extrabold text-amber-700 flex items-center gap-1.5 shadow-sm">
+                        <span>⏱️</span>
+                        <span id="arcade-timer" class="font-mono-key text-lg">01:00</span>
+                    </div>
+                    <div class="bg-white px-4 py-1.5 rounded-2xl border-2 border-purple-200 font-bold text-purple-700 shadow-sm">
+                        Score : <span id="arcade-score">0</span>
+                    </div>
+                    <div class="bg-white px-4 py-1.5 rounded-2xl border-2 border-rose-200 font-bold text-rose-600 shadow-sm">
+                        Vies : <span id="arcade-lives">❤️❤️❤️</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barre de temps restante (60s) -->
+            <div class="max-w-4xl mx-auto mb-3">
+                <div class="w-full bg-white h-3.5 rounded-full p-0.5 border-2 border-purple-200 shadow-inner">
+                    <div id="arcade-time-bar" class="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 h-full rounded-full transition-all duration-200" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div id="arcade-stage" class="relative max-w-4xl mx-auto">
+                <canvas id="arcade-canvas" class="w-full h-[420px] sm:h-[460px] block"></canvas>
+
+                <!-- Écran Superposé Démarrage / Fin de partie Arcade -->
+                <div id="arcade-overlay" class="absolute inset-0 bg-indigo-950/85 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center p-6 text-center text-white">
+                    <div id="arcade-overlay-icon" class="text-6xl mb-3 animate-bounce-gentle">🛸</div>
+                    <h3 id="arcade-overlay-title" class="text-3xl font-bold mb-2">Mission Spatiale (1 Minute) !</h3>
+                    <p id="arcade-overlay-desc" class="text-indigo-200 max-w-md mb-4">
+                        Les étoiles descendent doucement pendant <strong>1 minute</strong> ! Tape leur lettre avant qu'elles n'arrivent en bas. Attention : chaque erreur déclenche une <strong>bombe 💥 (-5 pts)</strong> !
+                    </p>
+                    <div id="arcade-overlay-stats" class="hidden bg-white/10 border border-white/20 rounded-2xl px-6 py-3 mb-5 flex gap-6 text-sm">
+                        <div>
+                            <div class="text-indigo-300 text-xs uppercase font-bold">Score Final</div>
+                            <div id="arcade-final-score" class="text-2xl font-extrabold text-amber-300">0</div>
+                        </div>
+                        <div>
+                            <div class="text-indigo-300 text-xs uppercase font-bold">Précision</div>
+                            <div id="arcade-final-acc" class="text-2xl font-extrabold text-emerald-300">100%</div>
+                        </div>
+                        <div>
+                            <div class="text-indigo-300 text-xs uppercase font-bold">Record Profil</div>
+                            <div id="arcade-final-best" class="text-2xl font-extrabold text-pink-300">0</div>
+                        </div>
+                    </div>
+                    <button onclick="startArcadeGame()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold text-lg px-8 py-3.5 rounded-2xl shadow-lg border-b-4 border-orange-700 active:translate-y-0.5 transition">
+                        Décoller maintenant ! 🚀
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODALE GESTION DES PROFILS D'ENFANTS ================= -->
+    <div id="profile-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-4 border-indigo-300 shadow-2xl animate-pop-in my-auto">
+            <div class="flex items-center justify-between gap-3 pb-4 mb-5 border-b-2 border-slate-100">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">👨‍👩‍👧‍👦</span>
+                    <div>
+                        <h3 class="text-2xl font-extrabold text-slate-800">Profils des Enfants</h3>
+                        <p class="text-xs sm:text-sm text-slate-500">Choisis ton profil, ton avatar débloqué ou crée un nouveau champion !</p>
+                    </div>
+                </div>
+                <button onclick="closeProfileModal()" class="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Liste des profils existants -->
+            <div class="mb-5">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">Profils enregistrés (clique sur un avatar pour le changer)</h4>
+                <div id="profiles-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-1">
+                    <!-- Rempli dynamiquement par JS -->
+                </div>
+            </div>
+
+            <!-- Sélecteur rapide d'avatar pour le profil actif (inclut les avatars débloqués !) -->
+            <div class="bg-amber-50/70 rounded-2xl p-3.5 border-2 border-amber-200 mb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-extrabold text-amber-900">🎭 Changer l'avatar du profil actif</span>
+                    <span class="text-[11px] font-bold text-amber-700">Termine des mondes pour en débloquer d'autres !</span>
+                </div>
+                <div id="active-profile-avatar-switcher" class="flex flex-wrap gap-1.5">
+                    <!-- Généré par JS -->
+                </div>
+            </div>
+
+            <!-- Formulaire création d'un nouveau profil -->
+            <div class="bg-sky-50/80 rounded-2xl p-4 sm:p-5 border-2 border-sky-200 mb-5">
+                <h4 class="text-sm font-extrabold text-sky-900 mb-3 flex items-center gap-2">
+                    <span>✨</span> Créer un nouveau profil d'enfant
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Prénom de l'enfant</label>
+                        <input type="text" id="new-profile-name" maxlength="18" placeholder="Ex : Léo, Emma, Lucas..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-sky-200 focus:border-sky-500 focus:outline-none font-bold text-slate-800 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Couleur préférée</label>
+                        <div id="color-picker" class="flex items-center gap-2 pt-1">
+                            <!-- Pastilles de couleurs -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">Choisis ton animal mascotte de départ</label>
+                    <div id="avatar-picker" class="flex flex-wrap gap-2">
+                        <!-- Avatars animaux -->
+                    </div>
+                </div>
+
+                <div class="mt-4 flex items-center justify-between gap-3">
+                    <span id="profile-form-feedback" class="text-xs font-bold text-rose-600"></span>
+                    <button onclick="createNewProfile()" class="bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-bold px-5 py-2.5 rounded-2xl shadow-md border-b-4 border-teal-700 active:translate-y-0.5 transition text-sm">
+                        + Ajouter ce profil
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sauvegarde & Restauration JSON -->
+            <div class="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="text-center sm:text-left">
+                    <div class="text-sm font-extrabold text-amber-900">💾 Sauvegarder ou Restaurer les profils</div>
+                    <div class="text-xs text-amber-700">Exporte un fichier JSON pour garder les progrès ou les transférer sur un autre ordinateur.</div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="exportProfilesJSON()" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-3.5 py-2 rounded-xl border-b-4 border-amber-600 text-xs sm:text-sm transition flex items-center gap-1.5">
+                        <span>⬇️</span> Sauvegarder
+                    </button>
+                    <label class="bg-white hover:bg-slate-50 text-slate-700 font-bold px-3.5 py-2 rounded-xl border-2 border-amber-300 text-xs sm:text-sm transition cursor-pointer flex items-center gap-1.5">
+                        <span>⬆️</span> Restaurer
+                        <input type="file" id="import-profiles-input" accept=".json,application/json" class="hidden" onchange="importProfilesJSON(event)">
+                    </label>
+                </div>
+            </div>
+            <div id="backup-status-msg" class="text-center text-xs font-bold text-emerald-600 mt-2 h-4"></div>
+        </div>
+    </div>
+
+    <!-- ================= MODALE CONFIGURATION ENSEIGNANT (MONDE 9) ================= -->
+    <div id="teacher-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-4 border-indigo-300 shadow-2xl animate-pop-in my-auto">
+            <div class="flex items-center justify-between gap-3 pb-4 mb-5 border-b-2 border-slate-100">
+                <div class="flex items-center gap-3">
+                    <span class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-2xl flex items-center justify-center shadow-sm">👩‍🏫</span>
+                    <div>
+                        <h3 class="text-2xl font-extrabold text-slate-800">Atelier de l'Enseignant (Monde 9)</h3>
+                        <p class="text-xs sm:text-sm text-slate-500">Préparez une dictée de mots ou un texte sur mesure pour vos élèves.</p>
+                    </div>
+                </div>
+                <button onclick="closeTeacherModal()" class="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Choix du mode -->
+            <div class="mb-4">
+                <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2">1. Type d'exercice</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="teacher-mode-words" onclick="setTeacherMode('words')" class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-indigo-50 border-indigo-500 text-indigo-900 shadow-sm">
+                        <span class="text-2xl">📝</span>
+                        <div>
+                            <div class="font-bold text-sm sm:text-base">Liste de mots</div>
+                            <div class="text-[11px] opacity-75">Mots de dictée séparés par espace ou virgule</div>
+                        </div>
+                    </button>
+                    <button type="button" id="teacher-mode-text" onclick="setTeacherMode('text')" class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-600 hover:border-indigo-200">
+                        <span class="text-2xl">📖</span>
+                        <div>
+                            <div class="font-bold text-sm sm:text-base">Texte libre / Phrase</div>
+                            <div class="text-[11px] opacity-75">Une ou plusieurs phrases à recopier</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modèles rapides -->
+            <div class="mb-4">
+                <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2">Modèles rapides prêts à l'emploi</label>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="applyTeacherPreset('invariables')" class="text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-1.5 rounded-xl border border-amber-300 transition">
+                        ✨ Mots invariables
+                    </button>
+                    <button type="button" onclick="applyTeacherPreset('animaux')" class="text-xs font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 px-3 py-1.5 rounded-xl border border-emerald-300 transition">
+                        🐄 Animaux de la ferme
+                    </button>
+                    <button type="button" onclick="applyTeacherPreset('dictee')" class="text-xs font-bold bg-sky-100 hover:bg-sky-200 text-sky-900 px-3 py-1.5 rounded-xl border border-sky-300 transition">
+                        📚 Petite phrase de dictée
+                    </button>
+                </div>
+            </div>
+
+            <!-- Zone de saisie du contenu -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label for="teacher-content-input" id="teacher-content-label" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                        2. Saisissez les mots à travailler
+                    </label>
+                    <span id="teacher-char-counter" class="text-xs font-bold text-slate-400">0 caractères</span>
+                </div>
+                <textarea id="teacher-content-input" rows="4" oninput="updateTeacherPreviewCount()" placeholder="Ex : maison, école, jardin, soleil, étoile..." class="w-full p-3.5 rounded-2xl border-2 border-indigo-200 focus:border-indigo-500 focus:outline-none font-mono-key text-base text-slate-800 bg-slate-50"></textarea>
+            </div>
+
+            <!-- Options pédagogiques -->
+            <div class="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100 mb-5 flex flex-col sm:flex-row gap-4 justify-between">
+                <label class="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" id="teacher-strict-case" class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500">
+                    <div>
+                        <div class="text-sm font-bold text-slate-700">Respecter majuscules et accents</div>
+                        <div class="text-[11px] text-slate-500">Sinon, tout est simplifié en minuscules sans accent</div>
+                    </div>
+                </label>
+
+                <label id="teacher-shuffle-wrapper" class="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" id="teacher-shuffle-words" class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500">
+                    <div>
+                        <div class="text-sm font-bold text-slate-700">Mélanger l'ordre des mots</div>
+                        <div class="text-[11px] text-slate-500">Ordre aléatoire à chaque essai</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <span id="teacher-form-error" class="text-xs font-bold text-rose-600"></span>
+                <div class="flex items-center gap-3 ml-auto">
+                    <button type="button" onclick="closeTeacherModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-2xl transition">
+                        Annuler
+                    </button>
+                    <button type="button" onclick="saveTeacherConfig(true)" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold px-6 py-2.5 rounded-2xl shadow-md border-b-4 border-indigo-800 active:translate-y-0.5 transition">
+                        Enregistrer et Jouer ▶
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALE DE VICTOIRE / FIN D'ÉPREUVE ================= -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 text-center border-4 border-amber-300 shadow-2xl animate-pop-in my-auto">
+            <div id="victory-avatar-celebration" class="text-5xl mb-2">🎉🦊🎉</div>
+            <h3 id="victory-title" class="text-2xl sm:text-3xl font-extrabold text-slate-800">Bravo Champion !</h3>
+            <p id="victory-message" class="text-slate-600 mt-1 text-sm font-medium">Tu as terminé cette épreuve avec brio !</p>
+
+            <!-- Étoiles gagnées -->
+            <div id="victory-stars" class="flex justify-center gap-3 my-3 text-4xl sm:text-5xl">
+                <span>⭐</span><span>⭐</span><span>⭐</span>
+            </div>
+
+            <!-- Récompense du palier débloquée (Badge / Couronne / Diplôme) -->
+            <div id="victory-reward-card" class="rounded-2xl p-3 mb-3 border-2 bg-amber-50 border-amber-300 flex flex-col items-center gap-1">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-amber-700" id="victory-reward-tier">Palier débloqué</div>
+                <div class="flex items-center justify-center gap-2.5">
+                    <span id="victory-reward-icon" class="text-3xl">🏅</span>
+                    <div class="text-left">
+                        <div id="victory-reward-name" class="font-extrabold text-slate-800 text-sm leading-tight">Badge de l'Explorateur</div>
+                        <div id="victory-reward-next-hint" class="text-[11px] text-slate-600 mt-0.5">Obtiens 2⭐ pour décrocher la Couronne 👑 !</div>
+                    </div>
+                </div>
+                <button type="button" id="btn-view-diploma-direct" onclick="openDiplomaForLevel(appState.currentLevelId)" class="hidden mt-1.5 text-xs font-extrabold bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-xl shadow-sm transition">
+                    📜 Voir mon Diplôme nominatif
+                </button>
+            </div>
+
+            <!-- Récompense spéciale de fin de série (Nouvel Avatar + Vignette Collector) -->
+            <div id="victory-series-unlock-card" class="hidden rounded-2xl p-3.5 mb-4 border-2 border-pink-300 bg-gradient-to-r from-pink-50 via-amber-50 to-purple-50 text-left shadow-sm">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-pink-700 mb-1.5 flex items-center gap-1">
+                    <span>🎊</span> Série complète (3/3 épreuves) ! Cadeaux débloqués :
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white/90 rounded-xl p-2 border border-pink-200 flex items-center gap-2">
+                        <span id="unlock-avatar-icon" class="text-3xl">🐢</span>
+                        <div>
+                            <div class="text-[10px] font-bold uppercase text-slate-400">Nouvel Avatar</div>
+                            <div id="unlock-avatar-name" class="text-xs font-extrabold text-slate-800">Tortue</div>
+                        </div>
+                    </div>
+                    <div class="bg-white/90 rounded-xl p-2 border border-amber-200 flex items-center gap-2">
+                        <span id="unlock-sticker-icon" class="text-3xl">🌻</span>
+                        <div>
+                            <div class="text-[10px] font-bold uppercase text-slate-400">Vignette Collector</div>
+                            <div id="unlock-sticker-name" class="text-xs font-extrabold text-slate-800">Fleur Solaire</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Récapitulatif Stats -->
+            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border-2 border-slate-100 mb-5">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-400 uppercase">Ta Vitesse</div>
+                    <div class="text-xl font-extrabold text-emerald-600"><span id="res-wpm">0</span> MPM</div>
+                </div>
+                <div>
+                    <div class="text-[11px] font-bold text-slate-400 uppercase">Ta Précision</div>
+                    <div class="text-xl font-extrabold text-sky-600"><span id="res-acc">100</span>%</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="retryCurrentTrial()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-2xl border-b-4 border-slate-300 transition">
+                    🔄 Rejouer
+                </button>
+                <button onclick="nextTrialOrLevel()" id="btn-next-level" class="flex-1 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-bold py-3 px-4 rounded-2xl border-b-4 border-teal-700 shadow-md transition">
+                    Épreuve suivante ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALE ALBUM DES RÉCOMPENSES, VIGNETTES & DIPLÔMES ================= -->
+    <div id="trophies-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 border-4 border-amber-300 shadow-2xl animate-pop-in my-auto">
+            <div class="flex items-center justify-between gap-3 pb-4 mb-5 border-b-2 border-slate-100">
+                <div class="flex items-center gap-3">
+                    <span id="trophies-header-avatar" class="text-4xl">🦊</span>
+                    <div>
+                        <h3 id="trophies-modal-title" class="text-2xl font-extrabold text-slate-800">Album Collector de Champion</h3>
+                        <p class="text-xs sm:text-sm text-slate-500">Vignettes des 9 Mondes • Avatars débloqués • Badges, Couronnes & Diplômes</p>
+                    </div>
+                </div>
+                <button onclick="closeTrophiesModal()" class="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Aperçu du Diplôme sélectionné -->
+            <div id="diploma-showcase" class="hidden mb-5 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-4 border-double border-amber-400 rounded-3xl p-5 text-center shadow-inner relative">
+                <div class="text-xs font-extrabold uppercase tracking-widest text-amber-700 mb-1">✨ Diplôme Officiel ClavierMagique ✨</div>
+                <div class="text-3xl my-1">📜👑🏅</div>
+                <p class="text-xs sm:text-sm text-slate-600">Décerné avec les félicitations de Léo le Renard à</p>
+                <div id="diploma-child-name" class="text-2xl sm:text-3xl font-extrabold text-indigo-800 my-1 underline decoration-amber-400 decoration-wavy">Prénom</div>
+                <p class="text-xs sm:text-sm text-slate-700">pour avoir brillamment maîtrisé le monde :</p>
+                <div id="diploma-level-title" class="text-base sm:text-lg font-extrabold text-amber-900 mt-1">Monde 1 — Nature & Prairie</div>
+                <div id="diploma-date" class="text-[11px] text-slate-400 mt-2">Conçu par Angéline • ClavierMagique</div>
+            </div>
+
+            <!-- Section Vignettes Collector & Avatars débloqués -->
+            <div class="mb-5">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-pink-600 mb-2.5 flex items-center gap-1.5">
+                    <span>🖼️</span> Album des Vignettes Collector & Avatars des Mondes
+                </h4>
+                <div id="stickers-album-grid" class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
+                    <!-- Généré dynamiquement par JS -->
+                </div>
+            </div>
+
+            <!-- Grille des récompenses par monde -->
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-amber-700 mb-2.5 flex items-center gap-1.5">
+                <span>🏆</span> Badges (1⭐), Couronnes (2⭐) & Diplômes (3⭐) par Monde
+            </h4>
+            <div id="trophies-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1">
+                <!-- Généré dynamiquement par JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALE CONFIRMATION RÉINITIALISATION ================= -->
+    <div id="reset-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center border-4 border-rose-200 shadow-2xl animate-pop-in">
+            <div class="text-5xl mb-3">🤔</div>
+            <h3 class="text-xl font-bold text-slate-800">Tout recommencer à zéro ?</h3>
+            <p class="text-slate-600 text-sm mt-2 mb-6">Tes étoiles, vignettes et avatars débloqués sur ce profil seront effacés.</p>
+            <div class="flex gap-3">
+                <button onclick="closeResetModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-2xl">Annuler</button>
+                <button onclick="confirmResetProgress()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 rounded-2xl">Oui, effacer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PIED DE PAGE ================= -->
+    <footer class="text-center py-4 text-xs text-slate-500">
+        © 2026 ClavierMagique — Conçu par Angéline • Apprendre la dactylographie en s'amusant ❤️
+    </footer>
+
+    <!-- ================= LOGIQUE JAVASCRIPT ================= -->
+    <script>
+        /* =========================================================================
+           1. SYNTHÉTISEUR AUDIO LUDIQUE (WEB AUDIO API - SANS FICHIERS EXTERNES)
+           ========================================================================= */
+        const SoundEngine = {
+            ctx: null,
+            enabled: true,
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playKeySuccess() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                const freqs = [523.25, 587.33, 659.25, 783.99, 880.00];
+                osc.frequency.setValueAtTime(freqs[Math.floor(Math.random() * freqs.length)], this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            },
+
+            playKeyError() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.18);
+                gain.gain.setValueAtTime(0.16, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            },
+
+            playVictory() {
+                if (!this.enabled) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    const start = this.ctx.currentTime + idx * 0.11;
+                    osc.frequency.setValueAtTime(freq, start);
+                    gain.gain.setValueAtTime(0.18, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.35);
+                });
+            },
+
+            playLaser() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(220, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            },
+
+            playBomb() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                const bufferSize = this.ctx.sampleRate * 0.45;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.12));
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(520, now);
+                filter.frequency.exponentialRampToValueAtTime(75, now + 0.45);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+                noise.stop(now + 0.45);
+
+                const subOsc = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+                subOsc.type = 'sine';
+                subOsc.frequency.setValueAtTime(130, now);
+                subOsc.frequency.exponentialRampToValueAtTime(32, now + 0.35);
+                subGain.gain.setValueAtTime(0.3, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                subOsc.connect(subGain);
+                subGain.connect(this.ctx.destination);
+                subOsc.start(now);
+                subOsc.stop(now + 0.35);
+            }
+        };
+
+        /* =========================================================================
+           2. CONFIGURATION DES 9 MONDES THÉMATIQUES & 3 ÉPREUVES PAR SÉRIE
+           ========================================================================= */
+        const LEVELS_AZERTY = [
+            {
+                id: 1,
+                title: "Les Deux Index : F et J",
+                world: "Monde Nature & Prairie",
+                themeKey: "nature",
+                icon: "🌿",
+                color: "from-emerald-400 to-green-600",
+                border: "border-emerald-300",
+                tip: "Sens les petits traits sous tes index sur F et J !",
+                trial2Meta: { icon: "🐸", short: "2. Grenouille", title: "Épreuve 2 : Sauts de Grenouille", hint: "Fais bondir la grenouille 🐸 de nénuphar en nénuphar !" },
+                trial3Meta: { icon: "🐝", short: "3. Abeille", title: "Épreuve 3 : Butinage des Fleurs", hint: "Guide l'abeille 🐝 pour récolter le pollen des fleurs-lettres !" },
+                trials: [
+                    "fff jjj fjf jfj ff jj fj jf fff jjj fjf",
+                    "fjf jfj fff jjj fj jf jfj fjf ff jj fjf",
+                    "jf fj fff jjj fjf jfj ff jj fj jf jfj"
+                ],
+                rewardAvatar: { icon: "🐸", name: "Grenouille" },
+                rewardSticker: { icon: "🌻", name: "Fleur Solaire" }
+            },
+            {
+                id: 2,
+                title: "Les Majeurs : D et K",
+                world: "Monde Forêt Enchantée",
+                themeKey: "forest",
+                icon: "🌲",
+                color: "from-lime-500 to-emerald-700",
+                border: "border-lime-300",
+                tip: "Tes majeurs se posent juste à côté sur D et K.",
+                trial2Meta: { icon: "🐿️", short: "2. Écureuil", title: "Épreuve 2 : Course de l'Écureuil", hint: "Aide l'écureuil 🐿️ à sauter de branche en branche !" },
+                trial3Meta: { icon: "🧚", short: "3. Fée", title: "Épreuve 3 : Baguette de la Fée", hint: "Lance la magie de la fée 🧚 sur les champignons lumineux !" },
+                trials: [
+                    "ddd kkk dkd kdk fdf jkj df jk fd kj dkf",
+                    "df jk fd kj dkd kdk fff jjj dkf fjd kdf",
+                    "kdk dkd fdf jkj df fd jk kj dkf jfd kdf"
+                ],
+                rewardAvatar: { icon: "🦌", name: "Petit Cerf" },
+                rewardSticker: { icon: "🍄", name: "Champignon Magique" }
+            },
+            {
+                id: 3,
+                title: "Les Annulaires : S et L",
+                world: "Monde Océan & Mer",
+                themeKey: "sea",
+                icon: "🌊",
+                color: "from-cyan-400 to-blue-600",
+                border: "border-cyan-300",
+                tip: "Doucement avec tes annulaires sur S et L !",
+                trial2Meta: { icon: "🐬", short: "2. Dauphin", title: "Épreuve 2 : Vagues du Dauphin", hint: "Fais sauter le dauphin 🐬 à travers les anneaux marins !" },
+                trial3Meta: { icon: "🐙", short: "3. Pieuvre", title: "Épreuve 3 : Bulles de la Pieuvre", hint: "La pieuvre 🐙 fait éclater les bulles-lettres avec ses bulles d'encre !" },
+                trials: [
+                    "sss lll sls lsl dsd klk fds jkl sal lad",
+                    "sel las sol lac fds jkl sls lsl dsd klk",
+                    "lac sel sol las sal lad fds jkl sls lsl"
+                ],
+                rewardAvatar: { icon: "🐬", name: "Dauphin Bleu" },
+                rewardSticker: { icon: "🐚", name: "Coquillage Nacré" }
+            },
+            {
+                id: 4,
+                title: "Les Auriculaires : Q et M",
+                world: "Monde Château Médiéval",
+                themeKey: "castle",
+                icon: "🏰",
+                color: "from-rose-400 to-pink-600",
+                border: "border-rose-300",
+                tip: "Tes petits doigts réveillent les touches Q et M !",
+                trial2Meta: { icon: "🐎", short: "2. Chevalier", title: "Épreuve 2 : Galop du Chevalier", hint: "Fais galoper le chevalier 🐎 de rempart en rempart !" },
+                trial3Meta: { icon: "🐉", short: "3. Dragon", title: "Épreuve 3 : Flamme du Petit Dragon", hint: "Le gentil dragon 🐉 allume les torches du château !" },
+                trials: [
+                    "qqq mmm qmq mqm sql dkm mal sac las ma",
+                    "mal sac las ma qmq mqm fds jkl qm mq mal",
+                    "sac mal ma las qqq mmm sql dkm qmq mqm"
+                ],
+                rewardAvatar: { icon: "🐢", name: "Tortue Royale" },
+                rewardSticker: { icon: "🛡️", name: "Blason d'Or" }
+            },
+            {
+                id: 5,
+                title: "Le Centre : G et H",
+                world: "Monde Jungle Tropicale",
+                themeKey: "jungle",
+                icon: "🌴",
+                color: "from-teal-400 to-emerald-600",
+                border: "border-teal-300",
+                tip: "Tes index voyagent au centre vers G et H puis reviennent !",
+                trial2Meta: { icon: "🐒", short: "2. Petit Singe", title: "Épreuve 2 : Lianes du Petit Singe", hint: "Balance le petit singe 🐒 de liane en liane !" },
+                trial3Meta: { icon: "🦜", short: "3. Perroquet", title: "Épreuve 3 : Trésor du Perroquet", hint: "Le perroquet 🦜 attrape les bananes dorées dans la jungle !" },
+                trials: [
+                    "fgf jhj gh hg gala saga flash halte plage",
+                    "gala plage halte saga flash fgf jhj gh hg",
+                    "flash halte gala plage saga fgf jhj gh hg"
+                ],
+                rewardAvatar: { icon: "🐒", name: "Ouistiti Malicieux" },
+                rewardSticker: { icon: "🍌", name: "Banane Dorée" }
+            },
+            {
+                id: 6,
+                title: "L'Étage du Haut : E, R, U, I",
+                world: "Monde Ciel & Nuages",
+                themeKey: "sky",
+                icon: "☁️",
+                color: "from-sky-400 to-indigo-500",
+                border: "border-sky-300",
+                tip: "Monte tes doigts d'un étage pour attraper E, R, U et I !",
+                trial2Meta: { icon: "🎈", short: "2. Montgolfière", title: "Épreuve 2 : Vol en Montgolfière", hint: "Fais voguer la montgolfière 🎈 de nuage en nuage !" },
+                trial3Meta: { icon: "⚡", short: "3. Phénix", title: "Épreuve 3 : Éclairs de l'Oiseau-Tonnerre", hint: "L'oiseau céleste 🦅 libère des rayons de soleil sur les étoiles !" },
+                trials: [
+                    "jeu rue rire lire fleur midi sucre fusee",
+                    "fleur fusee midi sucre jeu rue rire lire",
+                    "rire lire fleur fusee midi jeu rue sucre"
+                ],
+                rewardAvatar: { icon: "🦅", name: "Aigle des Cimes" },
+                rewardSticker: { icon: "🌈", name: "Arc-en-Ciel" }
+            },
+            {
+                id: 7,
+                title: "Les Voyelles Magiques : A, O, Y",
+                world: "Monde Volcan Magique",
+                themeKey: "volcano",
+                icon: "🌋",
+                color: "from-orange-400 to-red-600",
+                border: "border-orange-300",
+                tip: "Toutes les voyelles réunies pour former de vrais mots !",
+                trial2Meta: { icon: "🦖", short: "2. Bébé Dino", title: "Épreuve 2 : Rochers du Bébé Dino", hint: "Fais sauter le bébé dino 🦖 sur les rochers de lave !" },
+                trial3Meta: { icon: "🤠", short: "3. Explorateur", title: "Épreuve 3 : Lasso de l'Explorateur", hint: "L'explorateur 🤠 capture les cristaux magiques du volcan !" },
+                trials: [
+                    "papa maman koala robot soleil bateau",
+                    "koala soleil bateau robot papa maman",
+                    "robot bateau soleil koala maman papa"
+                ],
+                rewardAvatar: { icon: "🦖", name: "Bébé Dino" },
+                rewardSticker: { icon: "💎", name: "Cristal de Lave" }
+            },
+            {
+                id: 8,
+                title: "Grand Tournoi Cosmique",
+                world: "Monde Espace & Galaxie",
+                themeKey: "space",
+                icon: "🪐",
+                color: "from-indigo-500 to-purple-700",
+                border: "border-indigo-300",
+                tip: "Tu connais tout le clavier ! Montre ton talent dans les étoiles !",
+                trial2Meta: { icon: "👨‍🚀", short: "2. Astronaute", title: "Épreuve 2 : Sauts d'Astéroïdes", hint: "Fais bondir l'astronaute 👨‍🚀 d'astéroïde en astéroïde !" },
+                trial3Meta: { icon: "🛸", short: "3. Soucoupe", title: "Épreuve 3 : Rayon Cosmique", hint: "La soucoupe volante 🛸 téléporte les planètes-lettres !" },
+                trials: [
+                    "le petit renard agile saute sur la lune",
+                    "fusée étoile planète galaxie comète cosmos",
+                    "bravo champion tu maîtrises tout le clavier"
+                ],
+                rewardAvatar: { icon: "👽", name: "Petit Martien" },
+                rewardSticker: { icon: "🚀", name: "Fusée Suprême" }
+            },
+            {
+                id: 9,
+                title: "Atelier de l'Enseignant",
+                world: "Monde Sur-Mesure",
+                themeKey: "school",
+                icon: "👩‍🏫",
+                color: "from-amber-400 to-orange-600",
+                border: "border-amber-400",
+                alwaysUnlocked: true,
+                isCustomTeacher: true,
+                tip: "Exercice préparé spécialement par ton enseignant !",
+                trial2Meta: { icon: "🦉", short: "2. Hibou", title: "Épreuve 2 : Bibliothèque du Hibou", hint: "Fais voler le hibou savant 🦉 de livre en livre !" },
+                trial3Meta: { icon: "🪄", short: "3. Magicien", title: "Épreuve 3 : Plume Enchantée", hint: "La baguette magique 🪄 valide les mots de la dictée !" },
+                trials: [
+                    "ecole livre crayon cahier tableau eleve",
+                    "ecole livre crayon cahier tableau eleve",
+                    "ecole livre crayon cahier tableau eleve"
+                ],
+                rewardAvatar: { icon: "🦉", name: "Hibou Savant" },
+                rewardSticker: { icon: "🎓", name: "Médaille d'Excellence" }
+            }
+        ];
+
+        const LEVELS_QWERTY = [
+            { ...LEVELS_AZERTY[0], trials: ["fff jjj fjf jfj ff jj fj jf fff jjj fjf", "fjf jfj fff jjj fj jf jfj fjf ff jj fjf", "jf fj fff jjj fjf jfj ff jj fj jf jfj"] },
+            { ...LEVELS_AZERTY[1], trials: ["ddd kkk dkd kdk fdf jkj df jk fd kj dkf", "df jk fd kj dkd kdk fff jjj dkf fjd kdf", "kdk dkd fdf jkj df fd jk kj dkf jfd kdf"] },
+            { ...LEVELS_AZERTY[2], trials: ["sss lll sls lsl dsd klk fds jkl sal lad", "sad lad all fall fds jkl sls lsl dsd klk", "all fall sad lad sal lad fds jkl sls lsl"] },
+            { ...LEVELS_AZERTY[3], title: "Les Auriculaires : A et ;", tip: "Tes petits doigts réveillent A et ; !", trials: ["aaa ;;; a;a ;a; ssa ll; dad sad all fall", "dad sad all fall a;a ;a; fds jkl a; ;a dad", "fall all sad dad aaa ;;; ssa ll; a;a ;a;"] },
+            { ...LEVELS_AZERTY[4], trials: ["fgf jhj gh hg glad flag half dash flash", "glad flash half flag dash fgf jhj gh hg", "flash half glad flag dash fgf jhj gh hg"] },
+            { ...LEVELS_AZERTY[5], trials: ["red fire ride kid side like free deer", "like free deer side red fire ride kid", "ride kid like free deer red fire side"] },
+            { ...LEVELS_AZERTY[6], title: "Les Voyelles Magiques : Q, O, Y", trials: ["play toy boy koala robot sun moon star", "koala sun star robot play toy boy moon", "robot star sun koala boy toy play moon"] },
+            { ...LEVELS_AZERTY[7], trials: ["the quick brown fox jumps over the lazy dog", "rocket star planet galaxy comet cosmos", "bravo champion you mastered the keyboard"] },
+            { ...LEVELS_AZERTY[8] }
+        ];
+
+        const KEYBOARD_CONFIG = {
+            AZERTY: [
+                [
+                    { k: 'a', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 'z', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'e', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'r', f: 'index-l', label: 'Index gauche' },
+                    { k: 't', f: 'index-l', label: 'Index gauche' },
+                    { k: 'y', f: 'index-r', label: 'Index droit' },
+                    { k: 'u', f: 'index-r', label: 'Index droit' },
+                    { k: 'i', f: 'middle-r', label: 'Majeur droit' },
+                    { k: 'o', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: 'p', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: 'q', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 's', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'd', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'f', f: 'index-l', label: 'Index gauche (repère)', bump: true },
+                    { k: 'g', f: 'index-l', label: 'Index gauche' },
+                    { k: 'h', f: 'index-r', label: 'Index droit' },
+                    { k: 'j', f: 'index-r', label: 'Index droit (repère)', bump: true },
+                    { k: 'k', f: 'middle-r', label: 'Majeur droit' },
+                    { k: 'l', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: 'm', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: 'w', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 'x', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'c', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'v', f: 'index-l', label: 'Index gauche' },
+                    { k: 'b', f: 'index-l', label: 'Index gauche' },
+                    { k: 'n', f: 'index-r', label: 'Index droit' },
+                    { k: ',', f: 'middle-r', label: 'Majeur droit' },
+                    { k: ';', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: ':', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: ' ', f: 'thumb', label: 'Pouce (Barre Espace)', wide: true }
+                ]
+            ],
+            QWERTY: [
+                [
+                    { k: 'q', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 'w', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'e', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'r', f: 'index-l', label: 'Index gauche' },
+                    { k: 't', f: 'index-l', label: 'Index gauche' },
+                    { k: 'y', f: 'index-r', label: 'Index droit' },
+                    { k: 'u', f: 'index-r', label: 'Index droit' },
+                    { k: 'i', f: 'middle-r', label: 'Majeur droit' },
+                    { k: 'o', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: 'p', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: 'a', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 's', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'd', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'f', f: 'index-l', label: 'Index gauche (repère)', bump: true },
+                    { k: 'g', f: 'index-l', label: 'Index gauche' },
+                    { k: 'h', f: 'index-r', label: 'Index droit' },
+                    { k: 'j', f: 'index-r', label: 'Index droit (repère)', bump: true },
+                    { k: 'k', f: 'middle-r', label: 'Majeur droit' },
+                    { k: 'l', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: ';', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: 'z', f: 'pinky-l', label: 'Auriculaire gauche' },
+                    { k: 'x', f: 'ring-l', label: 'Annulaire gauche' },
+                    { k: 'c', f: 'middle-l', label: 'Majeur gauche' },
+                    { k: 'v', f: 'index-l', label: 'Index gauche' },
+                    { k: 'b', f: 'index-l', label: 'Index gauche' },
+                    { k: 'n', f: 'index-r', label: 'Index droit' },
+                    { k: 'm', f: 'middle-r', label: 'Majeur droit' },
+                    { k: ',', f: 'ring-r', label: 'Annulaire droit' },
+                    { k: '.', f: 'pinky-r', label: 'Auriculaire droit' }
+                ],
+                [
+                    { k: ' ', f: 'thumb', label: 'Pouce (Barre Espace)', wide: true }
+                ]
+            ]
+        };
+
+        /* =========================================================================
+           3. ÉTAT GLOBAL, PROFILS D'ENFANTS, SAUVEGARDE & CONFIGURATION ENSEIGNANT
+           ========================================================================= */
+        const STORAGE_KEY = 'clavierMagique_profiles_v2';
+        const TEACHER_STORAGE_KEY = 'clavierMagique_teacher_v1';
+
+        const BASE_AVATARS = ['🦊', '🐼', '🦁', '🐨', '🐯', '🐰', '🐶', '🐱'];
+        const PROFILE_COLORS = [
+            { id: 'sky', bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-900', dot: 'bg-sky-400' },
+            { id: 'emerald', bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-900', dot: 'bg-emerald-400' },
+            { id: 'amber', bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-900', dot: 'bg-amber-400' },
+            { id: 'rose', bg: 'bg-rose-100', border: 'border-rose-300', text: 'text-rose-900', dot: 'bg-rose-400' },
+            { id: 'purple', bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-900', dot: 'bg-purple-400' }
+        ];
+
+        const ENCOURAGEMENTS = [
+            "Super rythme ! Continue comme ça 🌟",
+            "Tes doigts dansent sur le clavier ! 🦊",
+            "Génial ! Tu deviens un vrai champion 🚀",
+            "Bravo pour ta précision ! ✨",
+            "Quelle concentration ! Continue 💪"
+        ];
+
+        const TEACHER_PRESETS = {
+            invariables: {
+                mode: 'words',
+                content: 'toujours jamais souvent parfois demain hier aujourd hui beaucoup',
+                strictCase: false,
+                shuffleWords: true
+            },
+            animaux: {
+                mode: 'words',
+                content: 'vache mouton cochon poule cheval canard lapin chevre',
+                strictCase: false,
+                shuffleWords: true
+            },
+            dictee: {
+                mode: 'text',
+                content: 'Le petit chat blanc dort sur le tapis du salon.',
+                strictCase: true,
+                shuffleWords: false
+            }
+        };
+
+        let teacherConfig = {
+            mode: 'words',
+            content: 'ecole livre crayon cahier tableau eleve',
+            strictCase: false,
+            shuffleWords: false
+        };
+
+        let profilesStore = {
+            activeProfileId: 'default-child',
+            profiles: []
+        };
+
+        let selectedNewAvatar = '🦊';
+        let selectedNewColor = 'sky';
+
+        let appState = {
+            currentView: 'map',
+            layout: 'AZERTY',
+            typingAnimations: false,
+            adminMode: false,
+            currentLevelId: 1,
+            currentTrialIndex: 0,
+            progress: {},
+            bestArcadeScore: 0,
+            unlockedAvatars: [...BASE_AVATARS],
+            unlockedStickers: [],
+            lesson: {
+                targetText: '',
+                strictCase: false,
+                isTeacherLevel: false,
+                teacherMode: null,
+                currentIndex: 0,
+                errors: 0,
+                totalKeystrokes: 0,
+                startTime: null,
+                timerInterval: null
+            }
+        };
+
+        function getLevels() {
+            return appState.layout === 'QWERTY' ? LEVELS_QWERTY : LEVELS_AZERTY;
+        }
+
+        function stripAccents(str) {
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function normalizeLevelProgress(entry) {
+            if (!entry) return { trials: [0, 0, 0] };
+            if (typeof entry === 'number') return { trials: [entry, 0, 0] };
+            if (Array.isArray(entry.trials)) {
+                return { trials: [entry.trials[0] || 0, entry.trials[1] || 0, entry.trials[2] || 0] };
+            }
+            return { trials: [0, 0, 0] };
+        }
+
+        function getLevelTrials(levelId) {
+            return normalizeLevelProgress(appState.progress[levelId]).trials;
+        }
+
+        function getLevelTotalStars(levelId) {
+            const t = getLevelTrials(levelId);
+            return (t[0] || 0) + (t[1] || 0) + (t[2] || 0);
+        }
+
+        function isLevelSeriesCompleted(levelId) {
+            const t = getLevelTrials(levelId);
+            return t[0] >= 1 && t[1] >= 1 && t[2] >= 1;
+        }
+
+        function getActiveProfile() {
+            return profilesStore.profiles.find(p => p.id === profilesStore.activeProfileId) || profilesStore.profiles[0];
+        }
+
+        function loadProgress() {
+            try {
+                const rawTeacher = localStorage.getItem(TEACHER_STORAGE_KEY);
+                if (rawTeacher) {
+                    const parsedT = JSON.parse(rawTeacher);
+                    teacherConfig = { ...teacherConfig, ...parsedT };
+                }
+
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && Array.isArray(parsed.profiles) && parsed.profiles.length > 0) {
+                        profilesStore = parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn('Lecture sauvegarde locale ignorée :', e);
+            }
+
+            if (!profilesStore.profiles || profilesStore.profiles.length === 0) {
+                profilesStore.profiles = [{
+                    id: 'default-child',
+                    name: 'Champion',
+                    avatar: '🦊',
+                    color: 'sky',
+                    layout: 'AZERTY',
+                    typingAnimations: false,
+                    progress: {},
+                    bestArcadeScore: 0,
+                    unlockedAvatars: [...BASE_AVATARS],
+                    unlockedStickers: []
+                }];
+                profilesStore.activeProfileId = 'default-child';
+            }
+
+            applyActiveProfileToState();
+            saveProgress();
+        }
+
+        function applyActiveProfileToState() {
+            const prof = getActiveProfile();
+            if (!prof) return;
+            profilesStore.activeProfileId = prof.id;
+            appState.layout = prof.layout || 'AZERTY';
+            appState.typingAnimations = Boolean(prof.typingAnimations);
+            appState.progress = prof.progress || {};
+            appState.bestArcadeScore = prof.bestArcadeScore || 0;
+            appState.unlockedAvatars = Array.isArray(prof.unlockedAvatars) && prof.unlockedAvatars.length > 0
+                ? [...new Set([...BASE_AVATARS, ...prof.unlockedAvatars])]
+                : [...BASE_AVATARS];
+            appState.unlockedStickers = Array.isArray(prof.unlockedStickers) ? [...prof.unlockedStickers] : [];
+
+            document.getElementById('header-profile-avatar').textContent = prof.avatar || '🦊';
+            document.getElementById('header-profile-name').textContent = prof.name || 'Champion';
+            document.getElementById('welcome-avatar-badge').textContent = prof.avatar || '🦊';
+            document.getElementById('welcome-heading').textContent =
+                `Bonjour ${prof.name} ! Prêt à explorer les 9 mondes ?`;
+            document.getElementById('welcome-arcade-record').textContent =
+                `🏆 Record Arcade : ${appState.bestArcadeScore} pts`;
+            document.getElementById('btn-layout').textContent = appState.layout;
+
+            applyTypingAnimationsPreference();
+            updateGlobalStatsDisplay();
+        }
+
+        function saveProgress() {
+            const prof = getActiveProfile();
+            if (prof) {
+                prof.layout = appState.layout;
+                prof.typingAnimations = appState.typingAnimations;
+                prof.progress = appState.progress;
+                prof.bestArcadeScore = appState.bestArcadeScore;
+                prof.unlockedAvatars = appState.unlockedAvatars;
+                prof.unlockedStickers = appState.unlockedStickers;
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(profilesStore));
+                localStorage.setItem(TEACHER_STORAGE_KEY, JSON.stringify(teacherConfig));
+            } catch (e) {
+                console.warn('Sauvegarde locale impossible :', e);
+            }
+            updateGlobalStatsDisplay();
+        }
+
+        function updateGlobalStatsDisplay() {
+            const levels = getLevels();
+            const maxStars = levels.length * 9;
+            let earnedStars = 0;
+            let badgesCount = 0;
+            let crownsCount = 0;
+            let diplomasCount = 0;
+
+            levels.forEach(lvl => {
+                const trials = getLevelTrials(lvl.id);
+                trials.forEach(s => {
+                    earnedStars += s;
+                    if (s >= 1) badgesCount++;
+                    if (s >= 2) crownsCount++;
+                    if (s >= 3) diplomasCount++;
+                });
+            });
+
+            document.getElementById('total-stars-display').textContent = `${earnedStars} / ${maxStars}`;
+            document.getElementById('count-stickers').textContent = `${appState.unlockedStickers.length} / ${levels.length}`;
+            document.getElementById('count-avatars').textContent = `${appState.unlockedAvatars.length}`;
+            document.getElementById('count-badges').textContent = `${badgesCount}`;
+            document.getElementById('count-crowns').textContent = `${crownsCount}`;
+            document.getElementById('count-diplomas').textContent = `${diplomasCount}`;
+        }
+
+        function toggleLayout() {
+            appState.layout = appState.layout === 'AZERTY' ? 'QWERTY' : 'AZERTY';
+            document.getElementById('btn-layout').textContent = appState.layout;
+            saveProgress();
+            if (appState.currentView === 'lesson') {
+                startLevel(appState.currentLevelId, appState.currentTrialIndex);
+            } else if (appState.currentView === 'map') {
+                renderMap();
+            }
+        }
+
+        function toggleTypingAnimations() {
+            appState.typingAnimations = !appState.typingAnimations;
+            applyTypingAnimationsPreference();
+            saveProgress();
+            if (appState.currentView === 'lesson') {
+                renderTypingCharacters();
+            }
+        }
+
+        function applyTypingAnimationsPreference() {
+            document.body.classList.toggle('no-typing-animations', !appState.typingAnimations);
+            const stateEl = document.getElementById('btn-animations-state');
+            const btnEl = document.getElementById('btn-animations');
+            if (stateEl && btnEl) {
+                stateEl.textContent = appState.typingAnimations ? 'ON' : 'OFF';
+                btnEl.className = appState.typingAnimations
+                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-3 py-2 rounded-2xl border-2 border-amber-300 text-xs sm:text-sm transition flex items-center gap-1'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-3 py-2 rounded-2xl border-2 border-slate-300 text-xs sm:text-sm transition flex items-center gap-1';
+            }
+        }
+
+        function toggleSound() {
+            SoundEngine.enabled = !SoundEngine.enabled;
+            const btn = document.getElementById('btn-sound');
+            btn.textContent = SoundEngine.enabled ? '🔊' : '🔇';
+            btn.className = SoundEngine.enabled
+                ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 p-2.5 rounded-2xl border-2 border-emerald-300 transition text-lg leading-none'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-600 p-2.5 rounded-2xl border-2 border-slate-300 transition text-lg leading-none';
+        }
+
+        function toggleAdminMode() {
+            appState.adminMode = !appState.adminMode;
+            const btn = document.getElementById('btn-admin-mode');
+            const stateEl = document.getElementById('btn-admin-state');
+            const bannerBtn = document.getElementById('btn-banner-admin');
+            if (btn && stateEl) {
+                stateEl.textContent = appState.adminMode ? 'ON' : 'OFF';
+                btn.className = appState.adminMode
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-3 py-2 rounded-2xl border-2 border-rose-800 shadow-md text-xs sm:text-sm transition flex items-center gap-1.5'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold px-3 py-2 rounded-2xl border-2 border-rose-300 text-xs sm:text-sm transition flex items-center gap-1.5 shadow-sm';
+            }
+            if (bannerBtn) {
+                bannerBtn.textContent = appState.adminMode ? '🔓 Mode Admin : ON (Tout débloqué)' : '🔑 Mode Admin : OFF';
+                bannerBtn.className = appState.adminMode
+                    ? 'text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl border border-rose-800 shadow-sm transition'
+                    : 'text-xs font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-xl border border-rose-300 transition';
+            }
+            if (appState.currentView === 'map') {
+                renderMap();
+            } else if (appState.currentView === 'lesson') {
+                renderTrialSelectorBar();
+            }
+        }
+
+        /* =========================================================================
+           4. NAVIGATION ENTRE VUES, CARTE DES 9 MONDES & MODALES
+           ========================================================================= */
+        function showView(viewName) {
+            appState.currentView = viewName;
+            document.getElementById('view-map').classList.add('hidden');
+            document.getElementById('view-lesson').classList.add('hidden');
+            document.getElementById('view-arcade').classList.add('hidden');
+
+            if (viewName !== 'lesson') {
+                stopLessonTimer();
+                stopTrialVisualLoop();
+            }
+            if (viewName !== 'arcade') {
+                stopArcadeLoop();
+            }
+
+            if (viewName === 'map') {
+                document.getElementById('view-map').classList.remove('hidden');
+                renderMap();
+            } else if (viewName === 'lesson') {
+                document.getElementById('view-lesson').classList.remove('hidden');
+            } else if (viewName === 'arcade') {
+                document.getElementById('view-arcade').classList.remove('hidden');
+                resizeArcadeCanvas();
+            }
+        }
+
+        function renderMap() {
+            const grid = document.getElementById('levels-grid');
+            const levels = getLevels();
+            grid.innerHTML = '';
+
+            levels.forEach((lvl, idx) => {
+                const prevLevel = idx > 0 ? levels[idx - 1] : null;
+                const isUnlocked = appState.adminMode || idx === 0 || Boolean(lvl.alwaysUnlocked) || (prevLevel && isLevelSeriesCompleted(prevLevel.id));
+                const trials = getLevelTrials(lvl.id);
+                const levelStars = getLevelTotalStars(lvl.id);
+                const seriesDone = isLevelSeriesCompleted(lvl.id);
+
+                const card = document.createElement('div');
+                card.className = `level-card bg-white rounded-3xl p-5 border-4 ${
+                    isUnlocked ? lvl.border : 'border-slate-200 opacity-75'
+                } shadow-lg flex flex-col justify-between relative overflow-hidden`;
+
+                const trialButtons = [
+                    { icon: '⌨️', label: '1. Clavier', stars: trials[0], unlocked: isUnlocked },
+                    { icon: lvl.trial2Meta.icon, label: lvl.trial2Meta.short, stars: trials[1], unlocked: appState.adminMode || (isUnlocked && trials[0] >= 1) },
+                    { icon: lvl.trial3Meta.icon, label: lvl.trial3Meta.short, stars: trials[2], unlocked: appState.adminMode || (isUnlocked && trials[1] >= 1) }
+                ];
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${
+                                    isUnlocked ? lvl.color : 'from-slate-300 to-slate-400'
+                                } text-white text-3xl flex items-center justify-center shadow-md shrink-0">
+                                    ${isUnlocked ? lvl.icon : '🔒'}
+                                </div>
+                                <div>
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">${lvl.world}</span>
+                                    <h4 class="text-lg font-extrabold text-slate-800 leading-tight">${lvl.title}</h4>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 font-extrabold text-xs shrink-0">
+                                ⭐ ${levelStars}/9
+                            </span>
+                        </div>
+
+                        <!-- Cadeaux de fin de série -->
+                        <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-2xl mb-3 text-xs font-bold ${
+                            seriesDone ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-100'
+                        }">
+                            <span>Cadeaux série : ${lvl.rewardAvatar.icon} ${lvl.rewardAvatar.name} + ${lvl.rewardSticker.icon}</span>
+                            <span>${seriesDone ? '✅ Débloqué' : '🔒 3/3'}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <!-- 3 Boutons d'épreuves -->
+                        <div class="grid grid-cols-3 gap-1.5 mb-2">
+                            ${trialButtons.map((tb, tIdx) => `
+                                <button type="button" ${tb.unlocked ? `onclick="startLevel(${lvl.id}, ${tIdx})"` : 'disabled'}
+                                    class="py-2 px-1.5 rounded-xl border-2 text-center transition flex flex-col items-center justify-center ${
+                                        tb.unlocked
+                                            ? 'bg-sky-50/70 hover:bg-sky-100 border-sky-200 text-slate-800 font-bold cursor-pointer'
+                                            : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                    }">
+                                    <span class="text-base">${tb.unlocked ? tb.icon : '🔒'}</span>
+                                    <span class="text-[11px] leading-tight mt-0.5">${tb.label}</span>
+                                    <span class="text-[10px] mt-0.5">${tb.stars > 0 ? '⭐'.repeat(tb.stars) : '☆☆☆'}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+
+                        ${lvl.isCustomTeacher ? `
+                            <button type="button" onclick="openTeacherModal()" class="w-full mt-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-extrabold text-xs py-2 rounded-xl border border-indigo-300 transition">
+                                ✏️ Configurer les mots / texte de l'enseignant
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function getTierRewardInfo(stars, levelTitle) {
+            if (stars >= 3) {
+                return {
+                    icon: '📜',
+                    title: "Diplôme d'Honneur",
+                    badgeText: 'Diplôme',
+                    cardClass: 'bg-purple-50 border-purple-300',
+                    nextHint: `Tu as obtenu le plus haut trophée de « ${levelTitle} » !`
+                };
+            }
+            if (stars === 2) {
+                return {
+                    icon: '👑',
+                    title: 'Couronne Royale',
+                    badgeText: 'Couronne',
+                    cardClass: 'bg-amber-50 border-amber-300',
+                    nextHint: 'Obtiens 3⭐ avec presque aucune erreur pour le Diplôme 📜 !'
+                };
+            }
+            return {
+                icon: '🏅',
+                title: "Badge d'Explorateur",
+                badgeText: 'Badge',
+                cardClass: 'bg-sky-50 border-sky-300',
+                nextHint: 'Obtiens 2⭐ pour décrocher la Couronne 👑 !'
+            };
+        }
+
+        /* ---------------- GESTION MODALE PROFILS ---------------- */
+        function openProfileModal() {
+            renderProfilesList();
+            renderAvatarAndColorPickers();
+            document.getElementById('backup-status-msg').textContent = '';
+            document.getElementById('profile-form-feedback').textContent = '';
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        function renderProfilesList() {
+            const list = document.getElementById('profiles-list');
+            list.innerHTML = profilesStore.profiles.map(p => {
+                const isActive = p.id === profilesStore.activeProfileId;
+                const colorObj = PROFILE_COLORS.find(c => c.id === p.color) || PROFILE_COLORS[0];
+                return `
+                    <div class="p-3 rounded-2xl border-2 flex items-center justify-between gap-2 transition ${
+                        isActive ? `${colorObj.bg} ${colorObj.border} shadow-sm` : 'bg-slate-50 border-slate-200 hover:border-indigo-300'
+                    }">
+                        <button type="button" onclick="selectProfile('${p.id}')" class="flex items-center gap-2.5 text-left flex-grow">
+                            <span class="text-3xl">${p.avatar || '🦊'}</span>
+                            <div>
+                                <div class="font-extrabold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <span>${p.name}</span>
+                                    ${isActive ? '<span class="text-[10px] bg-white px-2 py-0.5 rounded-full text-indigo-700 font-bold">Actif</span>' : ''}
+                                </div>
+                                <div class="text-[11px] text-slate-500">Record Arcade : ${p.bestArcadeScore || 0} pts</div>
+                            </div>
+                        </button>
+                        ${profilesStore.profiles.length > 1 ? `
+                            <button type="button" onclick="deleteProfile('${p.id}')" title="Supprimer ce profil" class="text-slate-400 hover:text-rose-600 p-1.5 text-sm">
+                                🗑️
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            const switcher = document.getElementById('active-profile-avatar-switcher');
+            const activeProf = getActiveProfile();
+            switcher.innerHTML = appState.unlockedAvatars.map(av => `
+                <button type="button" onclick="changeActiveProfileAvatar('${av}')"
+                    class="w-10 h-10 rounded-xl text-2xl flex items-center justify-center border-2 transition ${
+                        activeProf && activeProf.avatar === av
+                            ? 'bg-amber-300 border-amber-600 scale-105 shadow-sm'
+                            : 'bg-white border-amber-200 hover:bg-amber-100'
+                    }">
+                    ${av}
+                </button>
+            `).join('');
+        }
+
+        function renderAvatarAndColorPickers() {
+            const avatarPicker = document.getElementById('avatar-picker');
+            avatarPicker.innerHTML = BASE_AVATARS.map(av => `
+                <button type="button" onclick="selectedNewAvatar='${av}'; renderAvatarAndColorPickers();"
+                    class="w-10 h-10 rounded-xl text-2xl flex items-center justify-center border-2 transition ${
+                        selectedNewAvatar === av ? 'bg-sky-200 border-sky-600 scale-105' : 'bg-white border-sky-200 hover:bg-sky-100'
+                    }">
+                    ${av}
+                </button>
+            `).join('');
+
+            const colorPicker = document.getElementById('color-picker');
+            colorPicker.innerHTML = PROFILE_COLORS.map(c => `
+                <button type="button" onclick="selectedNewColor='${c.id}'; renderAvatarAndColorPickers();"
+                    class="w-7 h-7 rounded-full ${c.dot} border-2 transition ${
+                        selectedNewColor === c.id ? 'border-slate-900 scale-110 ring-2 ring-slate-300' : 'border-white'
+                    }">
+                </button>
+            `).join('');
+        }
+
+        function selectProfile(id) {
+            profilesStore.activeProfileId = id;
+            applyActiveProfileToState();
+            saveProgress();
+            renderProfilesList();
+            if (appState.currentView === 'map') renderMap();
+        }
+
+        function changeActiveProfileAvatar(avatar) {
+            const prof = getActiveProfile();
+            if (!prof) return;
+            prof.avatar = avatar;
+            applyActiveProfileToState();
+            saveProgress();
+            renderProfilesList();
+        }
+
+        function createNewProfile() {
+            const nameInput = document.getElementById('new-profile-name');
+            const feedback = document.getElementById('profile-form-feedback');
+            const name = (nameInput.value || '').trim();
+            if (!name) {
+                feedback.textContent = 'Merci d’écrire un prénom !';
+                return;
+            }
+            const newProf = {
+                id: 'child-' + Date.now(),
+                name: name,
+                avatar: selectedNewAvatar,
+                color: selectedNewColor,
+                layout: appState.layout,
+                typingAnimations: false,
+                progress: {},
+                bestArcadeScore: 0,
+                unlockedAvatars: [...BASE_AVATARS],
+                unlockedStickers: []
+            };
+            profilesStore.profiles.push(newProf);
+            profilesStore.activeProfileId = newProf.id;
+            nameInput.value = '';
+            feedback.textContent = '';
+            applyActiveProfileToState();
+            saveProgress();
+            renderProfilesList();
+            if (appState.currentView === 'map') renderMap();
+        }
+
+        function deleteProfile(id) {
+            if (profilesStore.profiles.length <= 1) return;
+            profilesStore.profiles = profilesStore.profiles.filter(p => p.id !== id);
+            if (profilesStore.activeProfileId === id) {
+                profilesStore.activeProfileId = profilesStore.profiles[0].id;
+            }
+            applyActiveProfileToState();
+            saveProgress();
+            renderProfilesList();
+            if (appState.currentView === 'map') renderMap();
+        }
+
+        function exportProfilesJSON() {
+            saveProgress();
+            const payload = {
+                app: 'ClavierMagique',
+                exportedAt: new Date().toISOString(),
+                profilesStore,
+                teacherConfig
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `claviermagique_sauvegarde_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            document.getElementById('backup-status-msg').textContent = '✅ Fichier de sauvegarde téléchargé !';
+        }
+
+        function importProfilesJSON(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data && data.profilesStore && Array.isArray(data.profilesStore.profiles) && data.profilesStore.profiles.length > 0) {
+                        profilesStore = data.profilesStore;
+                        if (data.teacherConfig) {
+                            teacherConfig = { ...teacherConfig, ...data.teacherConfig };
+                        }
+                        applyActiveProfileToState();
+                        saveProgress();
+                        renderProfilesList();
+                        if (appState.currentView === 'map') renderMap();
+                        document.getElementById('backup-status-msg').textContent = '✅ Profils restaurés avec succès !';
+                    } else {
+                        document.getElementById('backup-status-msg').textContent = '❌ Fichier JSON non reconnu.';
+                    }
+                } catch (err) {
+                    document.getElementById('backup-status-msg').textContent = '❌ Impossible de lire ce fichier.';
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        /* ---------------- GESTION MODALE ENSEIGNANT (MONDE 9) ---------------- */
+        function openTeacherModal() {
+            setTeacherMode(teacherConfig.mode || 'words');
+            document.getElementById('teacher-content-input').value = teacherConfig.content || '';
+            document.getElementById('teacher-strict-case').checked = Boolean(teacherConfig.strictCase);
+            document.getElementById('teacher-shuffle-words').checked = Boolean(teacherConfig.shuffleWords);
+            document.getElementById('teacher-form-error').textContent = '';
+            updateTeacherPreviewCount();
+            document.getElementById('teacher-modal').classList.remove('hidden');
+        }
+
+        function closeTeacherModal() {
+            document.getElementById('teacher-modal').classList.add('hidden');
+        }
+
+        function setTeacherMode(mode) {
+            teacherConfig.mode = mode;
+            const btnWords = document.getElementById('teacher-mode-words');
+            const btnText = document.getElementById('teacher-mode-text');
+            const shuffleWrap = document.getElementById('teacher-shuffle-wrapper');
+            const label = document.getElementById('teacher-content-label');
+
+            if (mode === 'words') {
+                btnWords.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-indigo-50 border-indigo-500 text-indigo-900 shadow-sm';
+                btnText.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-600 hover:border-indigo-200';
+                shuffleWrap.classList.remove('hidden');
+                label.textContent = '2. Saisissez les mots à travailler';
+            } else {
+                btnText.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-indigo-50 border-indigo-500 text-indigo-900 shadow-sm';
+                btnWords.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-600 hover:border-indigo-200';
+                shuffleWrap.classList.add('hidden');
+                label.textContent = '2. Saisissez le texte ou la phrase à recopier';
+            }
+        }
+
+        function applyTeacherPreset(presetKey) {
+            const preset = TEACHER_PRESETS[presetKey];
+            if (!preset) return;
+            setTeacherMode(preset.mode);
+            document.getElementById('teacher-content-input').value = preset.content;
+            document.getElementById('teacher-strict-case').checked = preset.strictCase;
+            document.getElementById('teacher-shuffle-words').checked = preset.shuffleWords;
+            updateTeacherPreviewCount();
+        }
+
+        function updateTeacherPreviewCount() {
+            const val = document.getElementById('teacher-content-input').value || '';
+            document.getElementById('teacher-char-counter').textContent = `${val.trim().length} caractères`;
+        }
+
+        function saveTeacherConfig(launchImmediately = false) {
+            const rawVal = (document.getElementById('teacher-content-input').value || '').trim();
+            const errorEl = document.getElementById('teacher-form-error');
+            if (!rawVal) {
+                errorEl.textContent = 'Veuillez saisir au moins un mot ou une phrase.';
+                return;
+            }
+            teacherConfig.content = rawVal;
+            teacherConfig.strictCase = document.getElementById('teacher-strict-case').checked;
+            teacherConfig.shuffleWords = document.getElementById('teacher-shuffle-words').checked;
+            saveProgress();
+            closeTeacherModal();
+            if (launchImmediately) {
+                startLevel(9, 0);
+            }
+        }
+
+        function buildTeacherLessonText(trialIndex = 0) {
+            const raw = (teacherConfig.content || 'ecole livre crayon').trim();
+            if (teacherConfig.mode === 'words') {
+                let words = raw.split(/[\s,;.\n]+/).map(w => w.trim()).filter(Boolean);
+                if (words.length === 0) words = ['ecole', 'livre'];
+                if (teacherConfig.shuffleWords || trialIndex > 0) {
+                    words = [...words].sort(() => Math.random() - 0.5);
+                }
+                return words.join(' ');
+            }
+            return raw.replace(/\s+/g, ' ');
+        }
+
+        /* ---------------- GESTION MODALE ALBUM & DIPLÔMES ---------------- */
+        function openTrophiesModal() {
+            const prof = getActiveProfile();
+            const childName = prof ? prof.name : 'Champion';
+            document.getElementById('trophies-header-avatar').textContent = prof ? prof.avatar : '🦊';
+            document.getElementById('trophies-modal-title').textContent = `Album Collector de ${childName}`;
+            document.getElementById('diploma-showcase').classList.add('hidden');
+
+            const levels = getLevels();
+            const stickersGrid = document.getElementById('stickers-album-grid');
+            stickersGrid.innerHTML = levels.map(lvl => {
+                const unlocked = appState.unlockedStickers.includes(lvl.id);
+                return `
+                    <div class="rounded-2xl p-2 border-2 text-center flex flex-col items-center justify-center ${
+                        unlocked ? 'bg-gradient-to-b from-amber-50 to-pink-50 border-amber-300 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-60'
+                    }">
+                        <span class="text-2xl">${unlocked ? lvl.rewardSticker.icon : '❓'}</span>
+                        <span class="text-[10px] font-extrabold text-slate-700 leading-tight mt-1">${unlocked ? lvl.rewardSticker.name : `Monde ${lvl.id}`}</span>
+                        <span class="text-[11px] mt-0.5">${unlocked ? lvl.rewardAvatar.icon : '🔒'}</span>
+                    </div>
+                `;
+            }).join('');
+
+            const trophiesGrid = document.getElementById('trophies-grid');
+            trophiesGrid.innerHTML = levels.map(lvl => {
+                const trials = getLevelTrials(lvl.id);
+                const maxStars = Math.max(...trials);
+                return `
+                    <div class="rounded-2xl p-3 border-2 ${maxStars > 0 ? 'bg-white border-amber-200' : 'bg-slate-50 border-slate-200 opacity-75'} flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-extrabold text-xs text-slate-800">${lvl.icon} ${lvl.world}</span>
+                            <span class="text-xs font-bold text-amber-700">⭐ ${getLevelTotalStars(lvl.id)}/9</span>
+                        </div>
+                        <div class="flex items-center justify-around py-1 text-lg">
+                            <span title="Badge (1⭐)" class="${maxStars >= 1 ? '' : 'opacity-25 grayscale'}">🏅</span>
+                            <span title="Couronne (2⭐)" class="${maxStars >= 2 ? '' : 'opacity-25 grayscale'}">👑</span>
+                            <span title="Diplôme (3⭐)" class="${maxStars >= 3 ? '' : 'opacity-25 grayscale'}">📜</span>
+                        </div>
+                        ${maxStars >= 3 ? `
+                            <button type="button" onclick="openDiplomaForLevel(${lvl.id})" class="text-[11px] font-extrabold bg-purple-100 hover:bg-purple-200 text-purple-800 py-1 rounded-xl transition">
+                                📜 Afficher le Diplôme
+                            </button>
+                        ` : `<div class="text-[10px] text-center text-slate-400">Obtiens 3⭐ sur une épreuve pour le Diplôme</div>`}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('trophies-modal').classList.remove('hidden');
+        }
+
+        function closeTrophiesModal() {
+            document.getElementById('trophies-modal').classList.add('hidden');
+        }
+
+        function openDiplomaForLevel(levelId) {
+            document.getElementById('victory-modal').classList.add('hidden');
+            openTrophiesModal();
+            const prof = getActiveProfile();
+            const lvl = getLevels().find(l => l.id === levelId) || getLevels()[0];
+            document.getElementById('diploma-child-name').textContent = prof ? prof.name : 'Champion';
+            document.getElementById('diploma-level-title').textContent = `${lvl.world} — ${lvl.title}`;
+            document.getElementById('diploma-date').textContent = `Délivré le ${new Date().toLocaleDateString('fr-FR')} • Conçu par Angéline`;
+            document.getElementById('diploma-showcase').classList.remove('hidden');
+        }
+
+        /* ---------------- MODALE RÉINITIALISATION ---------------- */
+        function resetProgressModal() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        function confirmResetProgress() {
+            appState.progress = {};
+            appState.bestArcadeScore = 0;
+            appState.unlockedAvatars = [...BASE_AVATARS];
+            appState.unlockedStickers = [];
+            const prof = getActiveProfile();
+            if (prof && !BASE_AVATARS.includes(prof.avatar)) {
+                prof.avatar = '🦊';
+            }
+            saveProgress();
+            applyActiveProfileToState();
+            closeResetModal();
+            renderMap();
+        }
+
+        /* =========================================================================
+           5. SCÈNES INTERACTIVES UNIQUES PAR MONDE (18 MINI-JEUX THÉMATIQUES)
+           ========================================================================= */
+        const WORLD_VISUAL_THEMES = {
+            nature: {
+                skyTop: '#bae6fd', skyBot: '#dcfce7', ground: '#38bdf8',
+                decor: '🌾',
+                t2: { hero: '🐸', supportType: 'lilypad', supportColor: '#16a34a', particle: '💧' },
+                t3: { hero: '🐝', targetIcon: '🌻', beamColor: '#facc15', projectile: '🍯', particle: '🌸' }
+            },
+            forest: {
+                skyTop: '#a7f3d0', skyBot: '#d1fae5', ground: '#166534',
+                decor: '🌲',
+                t2: { hero: '🐿️', supportType: 'branch', supportColor: '#78350f', particle: '🍂' },
+                t3: { hero: '🧚', targetIcon: '🍄', beamColor: '#e879f9', projectile: '✨', particle: '🌟' }
+            },
+            sea: {
+                skyTop: '#0284c7', skyBot: '#7dd3fc', ground: '#fde047',
+                decor: '🪸',
+                t2: { hero: '🐬', supportType: 'ring', supportColor: '#f59e0b', particle: '🫧' },
+                t3: { hero: '🐙', targetIcon: '🫧', beamColor: '#22d3ee', projectile: '💎', particle: '💦' }
+            },
+            castle: {
+                skyTop: '#fecdd3', skyBot: '#fef3c7', ground: '#64748b',
+                decor: '🏰',
+                t2: { hero: '🐎', supportType: 'tower', supportColor: '#94a3b8', particle: '🚩' },
+                t3: { hero: '🐉', targetIcon: '🕯️', beamColor: '#f97316', projectile: '🔥', particle: '💥' }
+            },
+            jungle: {
+                skyTop: '#bbf7d0', skyBot: '#fef08a', ground: '#15803d',
+                decor: '🌴',
+                t2: { hero: '🐒', supportType: 'vine', supportColor: '#3f6212', particle: '🍃' },
+                t3: { hero: '🦜', targetIcon: '🍌', beamColor: '#84cc16', projectile: '🥭', particle: '🌺' }
+            },
+            sky: {
+                skyTop: '#60a5fa', skyBot: '#e0f2fe', ground: '#f8fafc',
+                decor: '🌈',
+                t2: { hero: '🎈', supportType: 'cloud', supportColor: '#ffffff', particle: '☁️' },
+                t3: { hero: '🦅', targetIcon: '⭐', beamColor: '#fde047', projectile: '⚡', particle: '✨' }
+            },
+            volcano: {
+                skyTop: '#fdba74', skyBot: '#fca5a5', ground: '#dc2626',
+                decor: '🌋',
+                t2: { hero: '🦖', supportType: 'rock', supportColor: '#57534e', particle: '🔥' },
+                t3: { hero: '🤠', targetIcon: '💎', beamColor: '#fbbf24', projectile: '🪢', particle: '✨' }
+            },
+            space: {
+                skyTop: '#0f172a', skyBot: '#312e81', ground: '#4f46e5',
+                decor: '🌌',
+                t2: { hero: '👨‍🚀', supportType: 'asteroid', supportColor: '#94a3b8', particle: '🚀' },
+                t3: { hero: '🛸', targetIcon: '🪐', beamColor: '#a855f7', projectile: '🛸', particle: '💫' }
+            },
+            school: {
+                skyTop: '#fef3c7', skyBot: '#e0e7ff', ground: '#6366f1',
+                decor: '🏫',
+                t2: { hero: '🦉', supportType: 'book', supportColor: '#d97706', particle: '📖' },
+                t3: { hero: '🪄', targetIcon: '📝', beamColor: '#6366f1', projectile: '⭐', particle: '🎓' }
+            }
+        };
+
+        let trialVisualState = {
+            animId: null,
+            jumpAnim: 0,
+            shots: [],    // { startX, startY, targetX, targetY, progress, beamColor, projectile }
+            particles: [] // { x, y, vx, vy, emoji, alpha }
+        };
+
+        function stopTrialVisualLoop() {
+            if (trialVisualState.animId) {
+                cancelAnimationFrame(trialVisualState.animId);
+                trialVisualState.animId = null;
+            }
+        }
+
+        function triggerTrialVisualAction(trialIdx) {
+            const canvas = document.getElementById('trial-canvas');
+            if (!canvas) return;
+            const w = canvas.width || 700;
+            const h = canvas.height || 220;
+            const lvl = getLevels().find(l => l.id === appState.currentLevelId) || getLevels()[0];
+            const theme = WORLD_VISUAL_THEMES[lvl.themeKey] || WORLD_VISUAL_THEMES.nature;
+
+            if (trialIdx === 1) {
+                trialVisualState.jumpAnim = 1.0;
+                for (let i = 0; i < 6; i++) {
+                    trialVisualState.particles.push({
+                        x: w * 0.30 + (Math.random() - 0.5) * 36,
+                        y: h * 0.58,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: -Math.random() * 3.5 - 1,
+                        emoji: theme.t2.particle,
+                        alpha: 1
+                    });
+                }
+            } else if (trialIdx === 2) {
+                const targetX = w * 0.68;
+                const targetY = h * 0.44;
+                trialVisualState.shots.push({
+                    startX: w * 0.22,
+                    startY: h * 0.60,
+                    targetX,
+                    targetY,
+                    progress: 0,
+                    beamColor: theme.t3.beamColor,
+                    projectile: theme.t3.projectile
+                });
+                for (let i = 0; i < 8; i++) {
+                    trialVisualState.particles.push({
+                        x: targetX,
+                        y: targetY,
+                        vx: (Math.random() - 0.5) * 7,
+                        vy: (Math.random() - 0.5) * 7,
+                        emoji: theme.t3.particle,
+                        alpha: 1
+                    });
+                }
+            }
+        }
+
+        function drawSupportPlatform(ctx, type, color, x, y, isCurrent, isDone) {
+            ctx.save();
+            if (type === 'vine') {
+                const swing = Math.sin(performance.now() / 350 + x * 0.02) * 5;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.quadraticCurveTo(x + swing, y * 0.5, x + swing, y);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 5;
+                ctx.stroke();
+                x += swing;
+            } else if (type === 'lilypad') {
+                ctx.beginPath();
+                ctx.ellipse(x, y + 18, 32, 11, 0, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            } else if (type === 'branch') {
+                ctx.fillStyle = color;
+                ctx.fillRect(x - 32, y + 14, 64, 10);
+            } else if (type === 'ring') {
+                ctx.beginPath();
+                ctx.arc(x, y, 31, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 5;
+                ctx.stroke();
+            } else if (type === 'tower') {
+                ctx.fillStyle = color;
+                ctx.fillRect(x - 24, y + 12, 48, 55);
+            } else if (type === 'cloud') {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x - 14, y + 18, 16, 0, Math.PI * 2);
+                ctx.arc(x + 14, y + 18, 16, 0, Math.PI * 2);
+                ctx.arc(x, y + 12, 20, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (type === 'rock' || type === 'asteroid') {
+                ctx.beginPath();
+                ctx.arc(x, y + 16, 26, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            } else if (type === 'book') {
+                ctx.fillStyle = color;
+                ctx.fillRect(x - 28, y + 14, 56, 14);
+                ctx.fillStyle = '#fef3c7';
+                ctx.fillRect(x - 24, y + 16, 48, 5);
+            }
+
+            // Médaillon de la lettre à frapper
+            ctx.beginPath();
+            ctx.arc(x, y, isCurrent ? 24 : 19, 0, Math.PI * 2);
+            ctx.fillStyle = isDone ? '#86efac' : (isCurrent ? '#fde047' : '#ffffff');
+            ctx.fill();
+            ctx.lineWidth = isCurrent ? 4 : 2.5;
+            ctx.strokeStyle = isCurrent ? '#d97706' : '#475569';
+            ctx.stroke();
+            ctx.restore();
+            return x;
+        }
+
+        function startTrialVisualLoop() {
+            stopTrialVisualLoop();
+            const canvas = document.getElementById('trial-canvas');
+            if (!canvas) return;
+
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width || 760;
+            canvas.height = rect.height || 220;
+
+            function renderFrame() {
+                if (appState.currentView !== 'lesson' || appState.currentTrialIndex === 0) {
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                const lvl = getLevels().find(l => l.id === appState.currentLevelId) || getLevels()[0];
+                const theme = WORLD_VISUAL_THEMES[lvl.themeKey] || WORLD_VISUAL_THEMES.nature;
+                const lesson = appState.lesson;
+                const totalLen = Math.max(1, lesson.targetText.length);
+                const idx = lesson.currentIndex;
+
+                // Fond du monde
+                const grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, theme.skyTop);
+                grad.addColorStop(1, theme.skyBot);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Sol / Eau / Lave / Espace
+                ctx.fillStyle = theme.ground;
+                ctx.fillRect(0, h - 32, w, 32);
+
+                // Décors thématiques
+                ctx.font = '28px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                for (let d = 0; d < 5; d++) {
+                    const dx = (w / 5) * d + 60;
+                    ctx.fillText(theme.decor, dx, h - 46);
+                }
+
+                if (appState.currentTrialIndex === 1) {
+                    // ===== ÉPREUVE 2 : PARCOURS DE SAUTS THÉMATIQUE DU MONDE =====
+                    const spacing = 95;
+                    const heroScreenX = w * 0.30;
+                    if (trialVisualState.jumpAnim > 0) {
+                        trialVisualState.jumpAnim = Math.max(0, trialVisualState.jumpAnim - 0.06);
+                    }
+
+                    const startCharIdx = Math.max(0, idx - 2);
+                    const endCharIdx = Math.min(totalLen - 1, idx + 6);
+
+                    for (let cIdx = startCharIdx; cIdx <= endCharIdx; cIdx++) {
+                        const rel = cIdx - idx;
+                        const baseX = heroScreenX + rel * spacing + (trialVisualState.jumpAnim * spacing * 0.4);
+                        const baseY = h * 0.62;
+                        const isCurrent = cIdx === idx;
+                        const isDone = cIdx < idx;
+
+                        const actualX = drawSupportPlatform(
+                            ctx,
+                            theme.t2.supportType,
+                            theme.t2.supportColor,
+                            baseX,
+                            baseY,
+                            isCurrent,
+                            isDone
+                        );
+
+                        const charVal = lesson.targetText[cIdx] === ' ' ? '␣' : lesson.targetText[cIdx].toUpperCase();
+                        ctx.fillStyle = '#0f172a';
+                        ctx.font = 'bold 19px "JetBrains Mono", monospace';
+                        ctx.fillText(charVal, actualX, baseY + 1);
+                    }
+
+                    const jumpArc = Math.sin(trialVisualState.jumpAnim * Math.PI) * 38;
+                    const heroY = h * 0.44 - jumpArc;
+                    ctx.font = '48px sans-serif';
+                    ctx.fillText(theme.t2.hero, heroScreenX, heroY);
+
+                } else if (appState.currentTrialIndex === 2) {
+                    // ===== ÉPREUVE 3 : DÉFI D'ACTION / TIR THÉMATIQUE DU MONDE =====
+                    const heroX = w * 0.18;
+                    const heroY = h - 62;
+
+                    ctx.font = '56px sans-serif';
+                    ctx.fillText(theme.t3.hero, heroX, heroY);
+
+                    const currentChar = lesson.targetText[idx];
+                    if (currentChar !== undefined) {
+                        const targetX = w * 0.68;
+                        const bobY = Math.sin(performance.now() / 260) * 10;
+                        const targetY = h * 0.44 + bobY;
+
+                        // Halo lumineux autour de la cible du monde
+                        ctx.beginPath();
+                        ctx.arc(targetX, targetY, 40, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                        ctx.fill();
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = theme.t3.beamColor;
+                        ctx.stroke();
+
+                        ctx.font = '52px sans-serif';
+                        ctx.fillText(theme.t3.targetIcon, targetX, targetY - 2);
+
+                        // Badge lettre bien lisible sur la cible
+                        const disp = currentChar === ' ' ? '␣' : currentChar.toUpperCase();
+                        ctx.beginPath();
+                        ctx.arc(targetX, targetY + 18, 19, 0, Math.PI * 2);
+                        ctx.fillStyle = '#fde047';
+                        ctx.fill();
+                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#0f172a';
+                        ctx.font = 'bold 21px "JetBrains Mono", monospace';
+                        ctx.fillText(disp, targetX, targetY + 19);
+
+                        // Cible suivante en approche
+                        if (idx + 1 < totalLen) {
+                            const nextDisp = lesson.targetText[idx + 1] === ' ' ? '␣' : lesson.targetText[idx + 1].toUpperCase();
+                            ctx.beginPath();
+                            ctx.arc(w * 0.86, h * 0.52 - bobY * 0.6, 22, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                            ctx.fill();
+                            ctx.strokeStyle = '#94a3b8';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                            ctx.fillStyle = '#64748b';
+                            ctx.font = 'bold 16px "JetBrains Mono", monospace';
+                            ctx.fillText(nextDisp, w * 0.86, h * 0.52 - bobY * 0.6 + 1);
+                        }
+                    }
+
+                    // Rayons / Projectiles thématiques du monde
+                    for (let s = trialVisualState.shots.length - 1; s >= 0; s--) {
+                        const shot = trialVisualState.shots[s];
+                        shot.progress += 0.14;
+                        if (shot.progress >= 1) {
+                            trialVisualState.shots.splice(s, 1);
+                            continue;
+                        }
+                        const curX = shot.startX + (shot.targetX - shot.startX) * shot.progress;
+                        const curY = shot.startY + (shot.targetY - shot.startY) * shot.progress;
+
+                        ctx.beginPath();
+                        ctx.moveTo(shot.startX, shot.startY);
+                        ctx.lineTo(curX, curY);
+                        ctx.strokeStyle = shot.beamColor;
+                        ctx.lineWidth = 6;
+                        ctx.stroke();
+
+                        ctx.font = '26px sans-serif';
+                        ctx.fillText(shot.projectile, curX, curY);
+                    }
+                }
+
+                // Particules thématiques
+                for (let p = trialVisualState.particles.length - 1; p >= 0; p--) {
+                    const pt = trialVisualState.particles[p];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.alpha -= 0.035;
+                    if (pt.alpha <= 0) {
+                        trialVisualState.particles.splice(p, 1);
+                        continue;
+                    }
+                    ctx.globalAlpha = pt.alpha;
+                    ctx.font = '20px sans-serif';
+                    ctx.fillText(pt.emoji, pt.x, pt.y);
+                    ctx.globalAlpha = 1;
+                }
+
+                trialVisualState.animId = requestAnimationFrame(renderFrame);
+            }
+
+            renderFrame();
+        }
+
+        /* =========================================================================
+           6. LOGIQUE DE LEÇON, ÉPREUVES & CLAVIER VIRTUEL INTERACTIF
+           ========================================================================= */
+        function renderTrialSelectorBar() {
+            const bar = document.getElementById('trial-selector-bar');
+            if (!bar) return;
+            const lvl = getLevels().find(l => l.id === appState.currentLevelId) || getLevels()[0];
+            const trials = getLevelTrials(appState.currentLevelId);
+            const trialInfos = [
+                { icon: '⌨️', name: 'Épreuve 1 : Clavier' },
+                { icon: lvl.trial2Meta.icon, name: lvl.trial2Meta.title },
+                { icon: lvl.trial3Meta.icon, name: lvl.trial3Meta.title }
+            ];
+
+            bar.innerHTML = trialInfos.map((info, idx) => {
+                const isCurrent = appState.currentTrialIndex === idx;
+                const stars = trials[idx] || 0;
+                const unlocked = appState.adminMode || idx === 0 || trials[idx - 1] >= 1 || stars >= 1;
+                return `
+                    <button type="button" ${unlocked ? `onclick="startLevel(${appState.currentLevelId}, ${idx})"` : 'disabled'}
+                        class="rounded-2xl p-2.5 border-2 text-center transition flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                            isCurrent
+                                ? 'bg-indigo-600 border-indigo-800 text-white shadow-md font-extrabold'
+                                : (unlocked
+                                    ? 'bg-white hover:bg-indigo-50 border-slate-200 text-slate-700 font-bold cursor-pointer'
+                                    : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed')
+                        }">
+                        <span class="text-lg">${unlocked ? info.icon : '🔒'}</span>
+                        <span class="text-xs sm:text-sm">${info.name}</span>
+                        <span class="text-xs">${stars > 0 ? '⭐'.repeat(stars) : ''}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function startLevel(levelId, trialIndex = 0) {
+            appState.currentLevelId = levelId;
+            appState.currentTrialIndex = trialIndex;
+            const lvl = getLevels().find(l => l.id === levelId) || getLevels()[0];
+            const isTeacherLevel = Boolean(lvl.isCustomTeacher);
+            const lessonText = isTeacherLevel
+                ? buildTeacherLessonText(trialIndex)
+                : (lvl.trials[trialIndex] || lvl.trials[0]);
+
+            document.getElementById('btn-lesson-teacher-config').classList.toggle('hidden', !isTeacherLevel);
+
+            appState.lesson = {
+                targetText: lessonText,
+                strictCase: isTeacherLevel ? teacherConfig.strictCase : false,
+                isTeacherLevel: isTeacherLevel,
+                teacherMode: isTeacherLevel ? teacherConfig.mode : null,
+                currentIndex: 0,
+                errors: 0,
+                totalKeystrokes: 0,
+                startTime: null,
+                timerInterval: null
+            };
+
+            const trialCustomHints = [
+                isTeacherLevel
+                    ? (teacherConfig.mode === 'words'
+                        ? `Mode Liste de mots • Les mots apparaissent au fur et à mesure`
+                        : `Mode Texte libre • ${teacherConfig.strictCase ? 'Majuscules/accents requis' : 'Simplifié'}`)
+                    : lvl.tip,
+                lvl.trial2Meta.hint,
+                lvl.trial3Meta.hint
+            ];
+
+            const mascotEmojis = [isTeacherLevel ? '👩‍🏫' : '🦊', lvl.trial2Meta.icon, lvl.trial3Meta.icon];
+
+            document.getElementById('lesson-badge').textContent = `${lvl.world} • Épreuve ${trialIndex + 1}/3`;
+            document.getElementById('lesson-title').textContent = lvl.title;
+            document.getElementById('mascot-lesson-tip').textContent = trialCustomHints[trialIndex];
+            document.getElementById('mascot-lesson-emoji').textContent = mascotEmojis[trialIndex];
+            document.getElementById('stat-wpm').textContent = '0';
+            document.getElementById('stat-acc').textContent = '100';
+            document.getElementById('lesson-progress-bar').style.width = '0%';
+
+            showView('lesson');
+            renderTrialSelectorBar();
+
+            // Afficher la scène visuelle thématique pour Épreuve 2 ou Épreuve 3
+            const visualStage = document.getElementById('trial-visual-stage');
+            if (trialIndex === 1 || trialIndex === 2) {
+                visualStage.classList.remove('hidden');
+                trialVisualState.shots = [];
+                trialVisualState.particles = [];
+                trialVisualState.jumpAnim = 0;
+                startTrialVisualLoop();
+            } else {
+                visualStage.classList.add('hidden');
+                stopTrialVisualLoop();
+            }
+
+            renderVirtualKeyboard();
+            renderTypingCharacters();
+            updateTargetKeyHighlight();
+            focusHiddenInput();
+        }
+
+        function focusHiddenInput() {
+            const input = document.getElementById('mobile-hidden-input');
+            if (input) input.focus();
+        }
+
+        function renderVirtualKeyboard() {
+            const container = document.getElementById('virtual-keyboard');
+            const rows = KEYBOARD_CONFIG[appState.layout];
+            container.innerHTML = '';
+
+            rows.forEach((row) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'flex justify-center gap-1 sm:gap-2';
+
+                row.forEach(keyObj => {
+                    const keyEl = document.createElement('div');
+                    const displayChar = keyObj.k === ' ' ? 'ESPACE' : keyObj.k.toUpperCase();
+                    keyEl.dataset.key = keyObj.k;
+                    keyEl.className = `key-cap finger-${keyObj.f} font-mono-key font-bold rounded-xl sm:rounded-2xl flex flex-col items-center justify-center relative select-none ${
+                        keyObj.wide
+                            ? 'w-48 sm:w-72 h-11 sm:h-12 text-xs sm:text-sm tracking-widest'
+                            : 'w-8 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 text-base sm:text-xl'
+                    }`;
+
+                    keyEl.innerHTML = `
+                        <span>${displayChar}</span>
+                        ${keyObj.bump ? '<span class="w-3 h-1 bg-current opacity-60 rounded-full mt-0.5"></span>' : ''}
+                    `;
+                    rowDiv.appendChild(keyEl);
+                });
+
+                container.appendChild(rowDiv);
+            });
+        }
+
+        function renderTypingCharacters() {
+            const container = document.getElementById('typing-container');
+            const text = appState.lesson.targetText;
+            const idx = appState.lesson.currentIndex;
+            const isTeacherLevel = appState.lesson.isTeacherLevel;
+            const isProgressiveWords = isTeacherLevel && appState.lesson.teacherMode === 'words';
+            container.innerHTML = '';
+
+            if (isProgressiveWords) {
+                container.className = 'min-h-[130px] flex flex-col items-center justify-center gap-3 p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 cursor-text';
+            } else {
+                container.className = 'min-h-[100px] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 cursor-text';
+            }
+
+            const tokens = [];
+            let cursor = 0;
+            const parts = text.split(/( )/);
+            parts.forEach(part => {
+                if (part.length === 0) return;
+                tokens.push({
+                    str: part,
+                    isSpace: part === ' ',
+                    start: cursor,
+                    end: cursor + part.length
+                });
+                cursor += part.length;
+            });
+
+            if (isProgressiveWords) {
+                const wordTokens = tokens.filter(t => !t.isSpace);
+                let currentWordIdx = wordTokens.findIndex((wt, wIdx) => {
+                    const nextWt = wordTokens[wIdx + 1];
+                    const segmentEnd = nextWt ? nextWt.start : text.length;
+                    return idx < segmentEnd;
+                });
+                if (currentWordIdx === -1) currentWordIdx = Math.max(0, wordTokens.length - 1);
+
+                const visibleWords = wordTokens.slice(currentWordIdx, currentWordIdx + 2);
+
+                visibleWords.forEach((wToken, vIdx) => {
+                    const rowWrapper = document.createElement('div');
+                    rowWrapper.className = 'inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0';
+
+                    const isSecondWord = vIdx === 1;
+                    const isWordUntouched = idx < wToken.start;
+                // Déclencher l'action visuelle du mini-jeu du monde
+                if (appState.currentTrialIndex === 1 || appState.currentTrialIndex === 2) {
+                    triggerTrialVisualAction(appState.currentTrialIndex);
+                }
+
+                    for (let offset = 0; offset < wToken.str.length; offset++) {
+                        const i = wToken.start + offset;
+                        const char = wToken.str[offset];
+                        const span = document.createElement('span');
+
+                        let stateClasses = 'bg-white text-slate-400 border-slate-200';
+                        if (i < idx) {
+                            stateClasses = 'bg-emerald-100 text-emerald-700 border-emerald-300';
+                        } else if (i === idx) {
+                            const scaleCls = appState.typingAnimations ? 'scale-110 shadow-md' : 'shadow-sm';
+                            stateClasses = `bg-amber-300 text-slate-900 border-amber-500 ${scaleCls} ring-4 ring-amber-200 font-extrabold`;
+                        } else if (isWordUntouched) {
+                            stateClasses = 'bg-slate-100/85 text-slate-500 border-slate-200';
+                        }
+
+                        const animCls = appState.typingAnimations ? 'transition-all duration-150' : '';
+                        span.className = `typing-char-box font-mono-key inline-flex items-center justify-center rounded-xl border-2 ${animCls} w-9 sm:w-11 h-11 sm:h-12 text-xl sm:text-2xl ${stateClasses}`;
+                        span.textContent = char;
+                        rowWrapper.appendChild(span);
+                    }
+
+                    const spaceIdx = wToken.end;
+                    if (spaceIdx < text.length && text[spaceIdx] === ' ') {
+                        const spaceSpan = document.createElement('span');
+                        let spaceClasses = 'bg-white text-slate-400 border-slate-200';
+                        if (spaceIdx < idx) {
+                            spaceClasses = 'bg-emerald-100 text-emerald-700 border-emerald-300';
+                        } else if (spaceIdx === idx) {
+                            const scaleCls = appState.typingAnimations ? 'scale-110 shadow-md' : 'shadow-sm';
+                            spaceClasses = `bg-amber-300 text-slate-900 border-amber-500 ${scaleCls} ring-4 ring-amber-200 font-extrabold`;
+                        } else if (isWordUntouched) {
+                            spaceClasses = 'bg-slate-100/85 text-slate-500 border-slate-200';
+                        }
+                        const animCls = appState.typingAnimations ? 'transition-all duration-150' : '';
+                        spaceSpan.className = `typing-char-box font-mono-key inline-flex items-center justify-center rounded-xl border-2 ${animCls} w-8 sm:w-9 h-11 sm:h-12 text-sm ${spaceClasses}`;
+                        spaceSpan.textContent = '␣';
+                        rowWrapper.appendChild(spaceSpan);
+                    }
+
+                    container.appendChild(rowWrapper);
+                });
+
+                const remainingWords = Math.max(0, wordTokens.length - (currentWordIdx + visibleWords.length));
+                if (remainingWords > 0) {
+                    const moreBadge = document.createElement('div');
+                    moreBadge.className = 'mt-1 inline-flex items-center px-3.5 py-1.5 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold whitespace-nowrap';
+                    moreBadge.textContent = `+ ${remainingWords} mot${remainingWords > 1 ? 's' : ''} à découvrir...`;
+                    container.appendChild(moreBadge);
+                }
+                return;
+            }
+
+            tokens.forEach((token) => {
+                const wordWrapper = document.createElement('span');
+                wordWrapper.className = 'inline-flex items-center gap-1 whitespace-nowrap shrink-0';
+
+                const isWordUntouched = idx < token.start;
+
+                for (let offset = 0; offset < token.str.length; offset++) {
+                    const i = token.start + offset;
+                    const char = token.str[offset];
+                    const span = document.createElement('span');
+                    const isSpace = char === ' ';
+                    const display = isSpace ? '␣' : char;
+
+                    let stateClasses = 'bg-white text-slate-400 border-slate-200';
+
+                    if (i < idx) {
+                        stateClasses = 'bg-emerald-100 text-emerald-700 border-emerald-300';
+                    } else if (i === idx) {
+                        const scaleCls = appState.typingAnimations ? 'scale-110 shadow-md' : 'shadow-sm';
+                        stateClasses = `bg-amber-300 text-slate-900 border-amber-500 ${scaleCls} ring-4 ring-amber-200 font-extrabold`;
+                    } else if (isTeacherLevel && isWordUntouched) {
+                        stateClasses = 'bg-slate-100/80 text-slate-500 border-slate-200';
+                    }
+
+                    const animCls = appState.typingAnimations ? 'transition-all duration-150' : '';
+                    span.className = `typing-char-box font-mono-key inline-flex items-center justify-center rounded-xl border-2 ${animCls} ${
+                        isSpace ? 'w-7 sm:w-9 h-10 sm:h-12 text-sm' : 'w-9 sm:w-11 h-10 sm:h-12 text-xl sm:text-2xl'
+                    } ${stateClasses}`;
+                    span.textContent = display;
+                    wordWrapper.appendChild(span);
+                }
+
+                container.appendChild(wordWrapper);
+            });
+        }
+
+        function updateTargetKeyHighlight() {
+            const text = appState.lesson.targetText;
+            const idx = appState.lesson.currentIndex;
+            const targetChar = text[idx];
+
+            document.querySelectorAll('#virtual-keyboard .key-cap').forEach(el => {
+                el.classList.remove('key-target', 'ring-4', 'ring-amber-400');
+            });
+
+            if (targetChar === undefined) return;
+
+            const lowerTarget = targetChar.toLowerCase();
+            const rows = KEYBOARD_CONFIG[appState.layout];
+            let foundKeyObj = null;
+
+            for (const row of rows) {
+                for (const kObj of row) {
+                    if (kObj.k === lowerTarget) {
+                        foundKeyObj = kObj;
+                        break;
+                    }
+                }
+                if (foundKeyObj) break;
+            }
+
+            const keyEl = document.querySelector(`#virtual-keyboard .key-cap[data-key="${CSS.escape(lowerTarget)}"]`);
+            if (keyEl) {
+                keyEl.classList.add('key-target', 'ring-4', 'ring-amber-400');
+            }
+
+            const fingerDisplay = document.getElementById('finger-name-display');
+            const fingerPill = document.getElementById('finger-guide-pill');
+            const needsShift = appState.lesson.strictCase && targetChar !== lowerTarget && targetChar === targetChar.toUpperCase();
+
+            if (foundKeyObj) {
+                fingerDisplay.textContent = needsShift
+                    ? `${foundKeyObj.label} + Maj (Shift)`
+                    : foundKeyObj.label;
+                fingerPill.className = `px-4 py-1.5 rounded-2xl font-bold text-sm border-2 shadow-sm flex items-center gap-2 finger-${foundKeyObj.f}`;
+            } else {
+                fingerDisplay.textContent = needsShift ? 'Touche + Maj (Shift)' : 'Touche du clavier';
+                fingerPill.className = 'px-4 py-1.5 rounded-2xl font-bold text-sm border-2 shadow-sm flex items-center gap-2 bg-slate-100 border-slate-300 text-slate-700';
+            }
+        }
+
+        function animateVirtualKeyPress(char) {
+            if (!appState.typingAnimations) return;
+            const lower = char.toLowerCase();
+            const keyEl = document.querySelector(`#virtual-keyboard .key-cap[data-key="${CSS.escape(lower)}"]`);
+            if (keyEl) {
+                keyEl.classList.add('key-pressed');
+                setTimeout(() => keyEl.classList.remove('key-pressed'), 120);
+            }
+        }
+
+        function startLessonTimer() {
+            if (appState.lesson.timerInterval) return;
+            appState.lesson.startTime = Date.now();
+            appState.lesson.timerInterval = setInterval(updateLiveStats, 400);
+        }
+
+        function stopLessonTimer() {
+            if (appState.lesson.timerInterval) {
+                clearInterval(appState.lesson.timerInterval);
+                appState.lesson.timerInterval = null;
+            }
+        }
+
+        function updateLiveStats() {
+            const lesson = appState.lesson;
+            if (!lesson.startTime) return;
+
+            const elapsedMinutes = Math.max((Date.now() - lesson.startTime) / 60000, 0.01);
+            const wordsTyped = lesson.currentIndex / 5;
+            const wpm = Math.round(wordsTyped / elapsedMinutes);
+
+            const accuracy = lesson.totalKeystrokes > 0
+                ? Math.max(0, Math.round(((lesson.totalKeystrokes - lesson.errors) / lesson.totalKeystrokes) * 100))
+                : 100;
+
+            document.getElementById('stat-wpm').textContent = wpm;
+            document.getElementById('stat-acc').textContent = accuracy;
+        }
+
+        function handleLessonKeyPress(pressedChar) {
+            const lesson = appState.lesson;
+            if (lesson.currentIndex >= lesson.targetText.length) return;
+
+            if (!lesson.startTime) {
+                startLessonTimer();
+            }
+
+            animateVirtualKeyPress(pressedChar);
+            lesson.totalKeystrokes++;
+
+            const expectedChar = lesson.targetText[lesson.currentIndex];
+            const isMatch = lesson.strictCase
+                ? pressedChar === expectedChar
+                : stripAccents(pressedChar).toLowerCase() === stripAccents(expectedChar).toLowerCase();
+
+            if (isMatch) {
+                if (appState.currentTrialIndex === 2) {
+                    SoundEngine.playLaser();
+                } else {
+                    SoundEngine.playKeySuccess();
+                }
+
+                // Déclencher l'action du singe ou du cow-boy
+                if (appState.currentTrialIndex === 1 || appState.currentTrialIndex === 2) {
+                    triggerTrialVisualAction(appState.currentTrialIndex, expectedChar);
+                }
+
+                lesson.currentIndex++;
+
+                const pct = Math.round((lesson.currentIndex / lesson.targetText.length) * 100);
+                document.getElementById('lesson-progress-bar').style.width = `${pct}%`;
+
+                if (lesson.currentIndex > 0 && lesson.currentIndex % 10 === 0) {
+                    const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                    document.getElementById('mascot-lesson-tip').textContent = msg;
+                }
+
+                renderTypingCharacters();
+                updateTargetKeyHighlight();
+                updateLiveStats();
+
+                if (lesson.currentIndex >= lesson.targetText.length) {
+                    finishLesson();
+                }
+            } else {
+                SoundEngine.playKeyError();
+                lesson.errors++;
+                updateLiveStats();
+
+                if (appState.typingAnimations) {
+                    const typingBox = document.getElementById('typing-container');
+                    typingBox.classList.remove('animate-shake');
+                    void typingBox.offsetWidth;
+                    typingBox.classList.add('animate-shake');
+                }
+
+                const expectedDisplay = expectedChar === ' ' ? 'ESPACE' : expectedChar;
+                document.getElementById('mascot-lesson-tip').textContent =
+                    `Oups ! Regarde bien la touche qui brille : « ${expectedDisplay} » 💪`;
+            }
+        }
+
+        function finishLesson() {
+            stopLessonTimer();
+            SoundEngine.playVictory();
+
+            const prof = getActiveProfile();
+            const childName = prof ? prof.name : 'Champion';
+            const childAvatar = prof ? prof.avatar : '🦊';
+
+            const lesson = appState.lesson;
+            const elapsedMinutes = Math.max((Date.now() - (lesson.startTime || Date.now())) / 60000, 0.01);
+            const wpm = Math.max(1, Math.round((lesson.targetText.length / 5) / elapsedMinutes));
+            
+            const expectedLen = Math.max(1, lesson.targetText.length);
+            const effectiveErrors = Math.max(0, lesson.errors);
+            const rawRatio = Math.max(0, (expectedLen - effectiveErrors) / expectedLen);
+            const accuracy = Math.min(100, Math.max(0, Math.round(rawRatio * 100)));
+
+            let stars = 1;
+            if (lesson.isTeacherLevel) {
+                if (effectiveErrors <= 2) stars = 3;
+                else if (effectiveErrors <= 5) stars = 2;
+                else stars = 1;
+            } else {
+                if (effectiveErrors <= 2 || accuracy >= 90) stars = 3;
+                else if (effectiveErrors <= 6 || accuracy >= 70) stars = 2;
+                else stars = 1;
+            }
+
+            const wasSeriesCompletedBefore = isLevelSeriesCompleted(appState.currentLevelId);
+
+            // Enregistrer les étoiles de l'épreuve actuelle
+            const currentLvlData = normalizeLevelProgress(appState.progress[appState.currentLevelId]);
+            const prevTrialStars = currentLvlData.trials[appState.currentTrialIndex] || 0;
+            if (stars > prevTrialStars) {
+                currentLvlData.trials[appState.currentTrialIndex] = stars;
+            }
+            appState.progress[appState.currentLevelId] = currentLvlData;
+
+            const levels = getLevels();
+            const currentLvlObj = levels.find(l => l.id === appState.currentLevelId) || levels[0];
+            const isSeriesNowCompleted = isLevelSeriesCompleted(appState.currentLevelId);
+            const newlyUnlockedSeriesReward = !wasSeriesCompletedBefore && isSeriesNowCompleted;
+
+            // Déblocage de l'avatar & de la vignette collector de la série
+            if (isSeriesNowCompleted) {
+                if (!appState.unlockedAvatars.includes(currentLvlObj.rewardAvatar.icon)) {
+                    appState.unlockedAvatars.push(currentLvlObj.rewardAvatar.icon);
+                }
+                if (!appState.unlockedStickers.includes(currentLvlObj.id)) {
+                    appState.unlockedStickers.push(currentLvlObj.id);
+                }
+            }
+            saveProgress();
+
+            const maxStarsInLevel = Math.max(...currentLvlData.trials);
+            const reward = getTierRewardInfo(stars, currentLvlObj.title);
+
+            document.getElementById('victory-avatar-celebration').textContent = `🎉${childAvatar}🎉`;
+            document.getElementById('victory-title').textContent = `Bravo ${childName} !`;
+            document.getElementById('res-wpm').textContent = wpm;
+            document.getElementById('res-acc').textContent = accuracy;
+            document.getElementById('victory-stars').innerHTML = [1, 2, 3].map(s =>
+                `<span class="${s <= stars ? 'opacity-100 scale-110' : 'opacity-25 grayscale'}">⭐</span>`
+            ).join('');
+
+            const rewardCard = document.getElementById('victory-reward-card');
+            rewardCard.className = `rounded-2xl p-3 mb-3 border-2 flex flex-col items-center gap-1 ${reward.cardClass}`;
+            document.getElementById('victory-reward-tier').textContent = `Épreuve ${appState.currentTrialIndex + 1}/3 • Palier ${stars}/3`;
+            document.getElementById('victory-reward-icon').textContent = reward.icon;
+            document.getElementById('victory-reward-name').textContent = `${reward.title} (${reward.badgeText})`;
+            document.getElementById('victory-reward-next-hint').textContent = reward.nextHint;
+
+            // Carte cadeau fin de série (Nouvel Avatar + Vignette Collector)
+            const seriesUnlockCard = document.getElementById('victory-series-unlock-card');
+            if (newlyUnlockedSeriesReward) {
+                document.getElementById('unlock-avatar-icon').textContent = currentLvlObj.rewardAvatar.icon;
+                document.getElementById('unlock-avatar-name').textContent = currentLvlObj.rewardAvatar.name;
+                document.getElementById('unlock-sticker-icon').textContent = currentLvlObj.rewardSticker.icon;
+                document.getElementById('unlock-sticker-name').textContent = currentLvlObj.rewardSticker.name;
+                seriesUnlockCard.classList.remove('hidden');
+            } else {
+                seriesUnlockCard.classList.add('hidden');
+            }
+
+            const diplomaBtn = document.getElementById('btn-view-diploma-direct');
+            diplomaBtn.classList.toggle('hidden', maxStarsInLevel < 3);
+
+            const hasNextTrial = appState.currentTrialIndex < 2;
+            const hasNextWorld = appState.currentLevelId < levels.length;
+            const nextBtn = document.getElementById('btn-next-level');
+            if (hasNextTrial) {
+                nextBtn.textContent = `Épreuve ${appState.currentTrialIndex + 2}/3 ➡️`;
+            } else if (hasNextWorld) {
+                nextBtn.textContent = `Monde suivant ➡️`;
+            } else {
+                nextBtn.textContent = `Carte des mondes 🗺️`;
+            }
+
+            document.getElementById('victory-message').textContent =
+                newlyUnlockedSeriesReward
+                    ? `Incroyable ${childName} ! Tu as réussi les 3 épreuves de ${currentLvlObj.world} !`
+                    : (stars === 3
+                        ? `Score parfait ${childName} ! Tu décroches le Diplôme de cette épreuve !`
+                        : `Bravo ${childName}, épreuve ${appState.currentTrialIndex + 1}/3 réussie !`);
+
+            document.getElementById('victory-modal').classList.remove('hidden');
+        }
+
+        function retryCurrentTrial() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            startLevel(appState.currentLevelId, appState.currentTrialIndex);
+        }
+
+        function nextTrialOrLevel() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            const levels = getLevels();
+            if (appState.currentTrialIndex < 2) {
+                startLevel(appState.currentLevelId, appState.currentTrialIndex + 1);
+            } else if (appState.currentLevelId < levels.length) {
+                startLevel(appState.currentLevelId + 1, 0);
+            } else {
+                showView('map');
+            }
+        }
+
+        /* =========================================================================
+           7. MINI-JEU ARCADE : PLUIE D'ÉTOILES (60 SECONDES + VAISSEAU SPATIAL + BOMBES)
+           ========================================================================= */
+        let arcadeState = {
+            active: false,
+            score: 0,
+            lives: 3,
+            meteors: [],
+            lasers: [],
+            explosions: [],
+            starsBg: [],
+            shipX: 400,
+            shipTargetX: 400,
+            shipRecoil: 0,
+            totalSpawned: 0,
+            correctDestroyed: 0,
+            timerSeconds: 60,
+            timerInterval: null,
+            animationFrameId: null,
+            lastSpawnTime: 0
+        };
+
+        const ARCADE_KEYS = ['a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'w', 'x', 'c', 'v', 'b', 'n'];
+
+        function resizeArcadeCanvas() {
+            const canvas = document.getElementById('arcade-canvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width || 800;
+            canvas.height = rect.height || 420;
+        }
+
+        function exitArcade() {
+            stopArcadeLoop();
+            showView('map');
+        }
+
+        function startArcadeGame() {
+            stopArcadeLoop();
+            resizeArcadeCanvas();
+
+            const canvas = document.getElementById('arcade-canvas');
+            const initialShipX = canvas ? canvas.width / 2 : 400;
+            const starsBg = Array.from({ length: 42 }, () => ({
+                x: Math.random() * (canvas ? canvas.width : 800),
+                y: Math.random() * (canvas ? canvas.height : 420),
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 0.4 + 0.15
+            }));
+
+            arcadeState = {
+                active: true,
+                score: 0,
+                lives: 3,
+                meteors: [],
+                lasers: [],
+                explosions: [],
+                starsBg,
+                shipX: initialShipX,
+                shipTargetX: initialShipX,
+                shipRecoil: 0,
+                totalSpawned: 0,
+                correctDestroyed: 0,
+                timerSeconds: 60,
+                timerInterval: null,
+                animationFrameId: null,
+                lastSpawnTime: performance.now()
+            };
+
+            document.getElementById('arcade-overlay').classList.add('hidden');
+            document.getElementById('arcade-score').textContent = '0';
+            document.getElementById('arcade-lives').textContent = '❤️❤️❤️';
+            document.getElementById('arcade-timer').textContent = '01:00';
+            document.getElementById('arcade-time-bar').style.width = '100%';
+
+            arcadeState.timerInterval = setInterval(() => {
+                arcadeState.timerSeconds--;
+                const mins = String(Math.floor(arcadeState.timerSeconds / 60)).padStart(2, '0');
+                const secs = String(arcadeState.timerSeconds % 60).padStart(2, '0');
+                document.getElementById('arcade-timer').textContent = `${mins}:${secs}`;
+                const pct = Math.max(0, (arcadeState.timerSeconds / 60) * 100);
+                document.getElementById('arcade-time-bar').style.width = `${pct}%`;
+
+                if (arcadeState.timerSeconds <= 0) {
+                    endArcadeGame(true);
+                }
+            }, 1000);
+
+            spawnMeteor();
+            arcadeLoop();
+        }
+
+        function stopArcadeLoop() {
+            arcadeState.active = false;
+            if (arcadeState.timerInterval) {
+                clearInterval(arcadeState.timerInterval);
+                arcadeState.timerInterval = null;
+            }
+            if (arcadeState.animationFrameId) {
+                cancelAnimationFrame(arcadeState.animationFrameId);
+                arcadeState.animationFrameId = null;
+            }
+        }
+
+        function spawnMeteor() {
+            const canvas = document.getElementById('arcade-canvas');
+            if (!canvas) return;
+            const char = ARCADE_KEYS[Math.floor(Math.random() * ARCADE_KEYS.length)];
+            const x = Math.random() * (canvas.width - 100) + 50;
+            // Vitesse apaisée et progressive adaptée aux enfants
+            const speed = 0.55 + Math.random() * 0.35 + Math.min(0.65, arcadeState.score / 250);
+
+            arcadeState.meteors.push({
+                char: char,
+                x: x,
+                y: -36,
+                speed: speed,
+                radius: 30
+            });
+            arcadeState.totalSpawned++;
+        }
+
+        function drawSpaceship(ctx, x, y, recoil) {
+            ctx.save();
+            ctx.translate(x, y + recoil);
+
+            // Flamme des réacteurs
+            const flameHeight = 14 + Math.sin(performance.now() / 45) * 5;
+            ctx.beginPath();
+            ctx.moveTo(-11, 20);
+            ctx.lineTo(0, 20 + flameHeight);
+            ctx.lineTo(11, 20);
+            ctx.closePath();
+            ctx.fillStyle = '#fb923c';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(-6, 20);
+            ctx.lineTo(0, 20 + flameHeight * 0.65);
+            ctx.lineTo(6, 20);
+            ctx.closePath();
+            ctx.fillStyle = '#fef08a';
+            ctx.fill();
+
+            // Ailes latérales
+            ctx.beginPath();
+            ctx.moveTo(-34, 18);
+            ctx.lineTo(-14, -4);
+            ctx.lineTo(-14, 22);
+            ctx.closePath();
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(34, 18);
+            ctx.lineTo(14, -4);
+            ctx.lineTo(14, 22);
+            ctx.closePath();
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+
+            // Fuselage central du vaisseau
+            ctx.beginPath();
+            ctx.moveTo(0, -34);
+            ctx.quadraticCurveTo(22, -6, 16, 22);
+            ctx.lineTo(-16, 22);
+            ctx.quadraticCurveTo(-22, -6, 0, -34);
+            ctx.closePath();
+            ctx.fillStyle = '#f8fafc';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#38bdf8';
+            ctx.stroke();
+
+            // Cockpit lumineux
+            ctx.beginPath();
+            ctx.ellipse(0, -4, 8, 12, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-2, -7, 3, 5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fill();
+
+            // Canon laser au sommet
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(-3, -40, 6, 8);
+
+            ctx.restore();
+        }
+
+        function arcadeLoop() {
+            if (!arcadeState.active) return;
+
+            const canvas = document.getElementById('arcade-canvas');
+            const ctx = canvas.getContext('2d');
+            const now = performance.now();
+
+            // Espacement généreux entre deux étoiles (entre 1,5s et 2,6s)
+            const spawnDelay = Math.max(1500, 2600 - arcadeState.score * 6);
+            if (now - arcadeState.lastSpawnTime > spawnDelay) {
+                spawnMeteor();
+                arcadeState.lastSpawnTime = now;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Fond spatial
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#0f172a');
+            bgGrad.addColorStop(0.6, '#1e1b4b');
+            bgGrad.addColorStop(1, '#312e81');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Étoiles scintillantes en arrière-plan
+            arcadeState.starsBg.forEach(star => {
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Bouclier / Ligne de défense au sol
+            const shipY = canvas.height - 46;
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 20);
+            ctx.lineTo(canvas.width, canvas.height - 20);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Déplacement fluide du vaisseau vers la lettre ciblée
+            arcadeState.shipX += (arcadeState.shipTargetX - arcadeState.shipX) * 0.25;
+            if (arcadeState.shipRecoil > 0) {
+                arcadeState.shipRecoil = Math.max(0, arcadeState.shipRecoil - 0.8);
+            }
+
+            // Météores / Lettres qui tombent
+            for (let i = arcadeState.meteors.length - 1; i >= 0; i--) {
+                let m = arcadeState.meteors[i];
+                m.y += m.speed;
+
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#334155';
+                ctx.fill();
+                ctx.lineWidth = 3.5;
+                ctx.strokeStyle = '#fbbf24';
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 23px Fredoka, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(m.char.toUpperCase(), m.x, m.y);
+
+                if (m.y > canvas.height - 28) {
+                    arcadeState.meteors.splice(i, 1);
+                    triggerBombEffect(m.x, canvas.height - 32);
+                }
+            }
+
+            // Rayons laser tirés par le vaisseau
+            for (let l = arcadeState.lasers.length - 1; l >= 0; l--) {
+                const laser = arcadeState.lasers[l];
+                laser.alpha -= 0.08;
+                if (laser.alpha <= 0) {
+                    arcadeState.lasers.splice(l, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.globalAlpha = laser.alpha;
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(laser.startX, laser.startY);
+                ctx.lineTo(laser.endX, laser.endY);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(laser.startX, laser.startY);
+                ctx.lineTo(laser.endX, laser.endY);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Particules d'explosion
+            for (let e = arcadeState.explosions.length - 1; e >= 0; e--) {
+                const ex = arcadeState.explosions[e];
+                ex.x += ex.vx;
+                ex.y += ex.vy;
+                ex.alpha -= 0.035;
+                if (ex.alpha <= 0) {
+                    arcadeState.explosions.splice(e, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.globalAlpha = ex.alpha;
+                ctx.fillStyle = ex.color;
+                ctx.beginPath();
+                ctx.arc(ex.x, ex.y, ex.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Dessiner le vaisseau spatial du joueur
+            drawSpaceship(ctx, arcadeState.shipX, shipY, arcadeState.shipRecoil);
+
+            arcadeState.animationFrameId = requestAnimationFrame(arcadeLoop);
+        }
+
+        function spawnArcadeExplosion(x, y, colors) {
+            for (let i = 0; i < 16; i++) {
+                const angle = (Math.PI * 2 * i) / 16 + Math.random() * 0.3;
+                const speed = 1.5 + Math.random() * 4;
+                arcadeState.explosions.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 3 + Math.random() * 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1
+                });
+            }
+        }
+
+        function triggerBombEffect(bombX = null, bombY = null) {
+            SoundEngine.playBomb();
+            arcadeState.lives--;
+            arcadeState.score = Math.max(0, arcadeState.score - 5);
+
+            const canvas = document.getElementById('arcade-canvas');
+            const exX = bombX !== null ? bombX : arcadeState.shipX;
+            const exY = bombY !== null ? bombY : (canvas ? canvas.height - 60 : 340);
+            spawnArcadeExplosion(exX, exY, ['#ef4444', '#f97316', '#facc15']);
+
+            document.getElementById('arcade-score').textContent = arcadeState.score;
+            document.getElementById('arcade-lives').textContent = '❤️'.repeat(Math.max(0, arcadeState.lives)) + '🖤'.repeat(Math.max(0, 3 - arcadeState.lives));
+
+            const stage = document.getElementById('arcade-stage');
+            stage.classList.remove('animate-bomb-shake');
+            void stage.offsetWidth;
+            stage.classList.add('animate-bomb-shake');
+
+            if (arcadeState.lives <= 0) {
+                endArcadeGame(false);
+            }
+        }
+
+        function handleArcadeKeyPress(char) {
+            if (!arcadeState.active) return;
+            const lower = char.toLowerCase();
+
+            let targetIdx = -1;
+            let maxY = -999;
+
+            arcadeState.meteors.forEach((m, idx) => {
+                if (m.char === lower && m.y > maxY) {
+                    maxY = m.y;
+                    targetIdx = idx;
+                }
+            });
+
+            if (targetIdx !== -1) {
+                SoundEngine.playLaser();
+                const targetMeteor = arcadeState.meteors[targetIdx];
+                const canvas = document.getElementById('arcade-canvas');
+                const shipY = canvas ? canvas.height - 46 : 374;
+
+                // Déplacer instantanément et fluidement le vaisseau sous la cible et tirer
+                arcadeState.shipTargetX = targetMeteor.x;
+                arcadeState.shipX = targetMeteor.x;
+                arcadeState.shipRecoil = 7;
+
+                arcadeState.lasers.push({
+                    startX: arcadeState.shipX,
+                    startY: shipY - 38,
+                    endX: targetMeteor.x,
+                    endY: targetMeteor.y,
+                    alpha: 1
+                });
+
+                spawnArcadeExplosion(targetMeteor.x, targetMeteor.y, ['#38bdf8', '#facc15', '#34d399', '#ffffff']);
+
+                arcadeState.meteors.splice(targetIdx, 1);
+                arcadeState.score += 10;
+                arcadeState.correctDestroyed++;
+                document.getElementById('arcade-score').textContent = arcadeState.score;
+            } else {
+                triggerBombEffect();
+            }
+        }
+
+        function endArcadeGame(timeOut = false) {
+            stopArcadeLoop();
+            SoundEngine.playVictory();
+
+            if (arcadeState.score > appState.bestArcadeScore) {
+                appState.bestArcadeScore = arcadeState.score;
+                saveProgress();
+                const recordBadge = document.getElementById('welcome-arcade-record');
+                if (recordBadge) recordBadge.textContent = `🏆 Record Arcade : ${appState.bestArcadeScore} pts`;
+            }
+
+            const totalTried = arcadeState.correctDestroyed + (3 - arcadeState.lives);
+            const acc = totalTried > 0 ? Math.round((arcadeState.correctDestroyed / Math.max(1, totalTried + (3 - arcadeState.lives))) * 100) : 100;
+
+            document.getElementById('arcade-overlay-icon').textContent = timeOut ? '🏆' : '💥';
+            document.getElementById('arcade-overlay-title').textContent = timeOut ? 'Temps écoulé ! Super !' : 'Boum ! Partie terminée !';
+            document.getElementById('arcade-overlay-desc').textContent = timeOut
+                ? 'Bravo tu as résisté 1 minute entière ! Regarde ton score final.'
+                : 'Tes 3 vies ont été consumées par les bombes. Réessaie pour battre ton record !';
+
+            document.getElementById('arcade-final-score').textContent = arcadeState.score;
+            document.getElementById('arcade-final-acc').textContent = `${Math.min(100, Math.max(0, acc))}%`;
+            document.getElementById('arcade-final-best').textContent = appState.bestArcadeScore;
+            document.getElementById('arcade-overlay-stats').classList.remove('hidden');
+            document.getElementById('arcade-overlay').classList.remove('hidden');
+        }
+
+        /* =========================================================================
+           8. ÉCOUTEURS GLOBAUX DU CLAVIER PHYSIQUE & INITIALISATION
+           ========================================================================= */
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.key;
+            if (key.length === 1) {
+                if (appState.currentView === 'lesson') {
+                    e.preventDefault();
+                    handleLessonKeyPress(key);
+                } else if (appState.currentView === 'arcade') {
+                    e.preventDefault();
+                    handleArcadeKeyPress(key);
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProgress();
+            applyTypingAnimationsPreference();
+            showView('map');
+
+            const hiddenInput = document.getElementById('mobile-hidden-input');
+            if (hiddenInput) {
+                hiddenInput.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    if (val.length > 0) {
+                        const char = val[val.length - 1];
+                        if (appState.currentView === 'lesson') {
+                            handleLessonKeyPress(char);
+                        } else if (appState.currentView === 'arcade') {
+                            handleArcadeKeyPress(char);
+                        }
+                        e.target.value = '';
+                    }
+                });
+            }
+        });
+
+        /* =========================================================================
+           9. CONFIGURATION WEBAPP (PWA) & LOGO RENARD POUR GITHUB PAGES
+           ========================================================================= */
+        let deferredInstallPrompt = null;
+
+        (function initEmbeddedWebApp() {
+            try {
+                const iconCanvas = document.createElement('canvas');
+                iconCanvas.width = 512;
+                iconCanvas.height = 512;
+                const ictx = iconCanvas.getContext('2d');
+
+                const grad = ictx.createLinearGradient(0, 0, 512, 512);
+                grad.addColorStop(0, '#fbbf24');
+                grad.addColorStop(1, '#ea580c');
+                ictx.fillStyle = grad;
+
+                const r = 110;
+                ictx.beginPath();
+                ictx.moveTo(r, 0);
+                ictx.lineTo(512 - r, 0);
+                ictx.quadraticCurveTo(512, 0, 512, r);
+                ictx.lineTo(512, 512 - r);
+                ictx.quadraticCurveTo(512, 512, 512 - r, 512);
+                ictx.lineTo(r, 512);
+                ictx.quadraticCurveTo(0, 512, 0, 512 - r);
+                ictx.lineTo(0, r);
+                ictx.quadraticCurveTo(0, 0, r, 0);
+                ictx.closePath();
+                ictx.fill();
+
+                ictx.font = '310px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+                ictx.textAlign = 'center';
+                ictx.textBaseline = 'middle';
+                ictx.fillText('🦊', 256, 275);
+
+                const iconDataUrl = iconCanvas.toDataURL('image/png');
+
+                const manifest = {
+                    name: 'ClavierMagique',
+                    short_name: 'ClavierMagique',
+                    description: 'Apprends à taper au clavier en t’amusant — Conçu par Angéline',
+                    start_url: window.location.href.split('#')[0],
+                    display: 'standalone',
+                    background_color: '#e0f2fe',
+                    theme_color: '#f59e0b',
+                    icons: [
+                        { src: iconDataUrl, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+                        { src: iconDataUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+                    ]
+                };
+
+                const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+                const linkEl = document.createElement('link');
+                linkEl.rel = 'manifest';
+                linkEl.href = manifestUrl;
+                document.head.appendChild(linkEl);
+            } catch (err) {
+                console.warn('Initialisation manifeste PWA ignorée :', err);
+            }
+        })();
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const installBtn = document.getElementById('btn-install-pwa');
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            const installBtn = document.getElementById('btn-install-pwa');
+            if (installBtn) {
+                installBtn.classList.add('hidden');
+            }
+        });
+
+        async function installWebApp() {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                deferredInstallPrompt = null;
+                document.getElementById('btn-install-pwa').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
