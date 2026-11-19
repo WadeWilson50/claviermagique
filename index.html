@@ -1,0 +1,2541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClavierMagique - Apprendre le clavier en s'amusant !</title>
+    <link id="dynamic-favicon" rel="icon" type="image/png">
+    <link id="dynamic-apple-icon" rel="apple-touch-icon">
+    <link id="dynamic-manifest" rel="manifest">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 50%, #fce7f3 100%);
+            min-height: 100vh;
+            user-select: none;
+        }
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .key-target {
+            transform: scale(1.12) translateY(-3px);
+            box-shadow: 0 0 0 4px #facc15, 0 10px 15px -3px rgba(250, 204, 21, 0.5) !important;
+            z-index: 20;
+            animation: pulseKey 1s infinite alternate;
+        }
+        @keyframes pulseKey {
+            from { filter: brightness(1); }
+            to { filter: brightness(1.18); }
+        }
+        .shake-error {
+            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+        .current-char {
+            border-bottom: 4px solid #f59e0b;
+            animation: blinkCursor 0.9s infinite;
+        }
+        @keyframes blinkCursor {
+            0%, 100% { border-color: #f59e0b; }
+            50% { border-color: transparent; }
+        }
+        .level-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .level-card:hover:not(.locked) {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 24px -5px rgba(0, 0, 0, 0.12);
+        }
+        @media print {
+            body * { visibility: hidden !important; }
+            #modal-diploma, #modal-diploma * { visibility: visible !important; }
+            #modal-diploma { position: fixed; inset: 0; background: white !important; padding: 0 !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col justify-between overflow-x-hidden">
+
+    <!-- ==================== BARRE SUPÉRIEURE ==================== -->
+    <header class="bg-white/95 backdrop-blur-md shadow-md sticky top-0 z-40 border-b-4 border-amber-300">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="showScreen('map')" data-help-title="Accueil ClavierMagique" data-help="Clique ici à tout moment pour revenir sur la carte des mondes.">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-2xl shadow">
+                    🦊
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-600 bg-clip-text text-transparent leading-tight">
+                        ClavierMagique
+                    </h1>
+                    <p class="text-[11px] text-slate-500 font-medium hidden sm:block">11 Mondes + 7 Bonus • 54 Épreuves • Collection</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <!-- Profil Enfant -->
+                <button onclick="openProfilesModal()" id="btn-profile" data-help-title="Profil de l'élève" data-help="Choisis ton prénom, change ton avatar ou crée un nouveau profil élève." class="bg-emerald-100 hover:bg-emerald-200 border-2 border-emerald-300 px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-sm transition">
+                    <span id="header-profile-avatar" class="text-lg">🦊</span>
+                    <span id="header-profile-name" class="font-extrabold text-emerald-900 text-xs sm:text-sm max-w-[90px] truncate">Aventurier</span>
+                    <span class="text-emerald-700 text-[10px]">▼</span>
+                </button>
+
+                <!-- Étoiles & Album -->
+                <button onclick="openTrophiesModal()" data-help-title="Album & Diplôme" data-help="Consulte tes étoiles, ton album de vignettes collector et imprime ton Diplôme Officiel !" class="bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-sm transition">
+                    <span class="text-base">⭐</span>
+                    <span id="total-stars-display" class="font-extrabold text-amber-800 text-xs sm:text-sm">0 / 162</span>
+                    <span class="text-sm">🏆</span>
+                </button>
+
+                <!-- Admin -->
+                <button onclick="toggleAdminMode()" id="btn-admin-mode" data-help-title="Mode Administrateur" data-help="Active ou désactive le déverrouillage instantané de tous les mondes pour tester." class="bg-rose-100 hover:bg-rose-200 border-2 border-rose-300 text-rose-800 font-extrabold px-2.5 py-1.5 rounded-2xl text-xs transition flex items-center gap-1 shadow-sm">
+                    <span>🔑</span>
+                    <span class="hidden md:inline">Admin</span>
+                    <span id="btn-admin-state" class="px-1.5 py-0.5 rounded-lg bg-white text-rose-800 text-[10px]">OFF</span>
+                </button>
+
+                <!-- Arcade -->
+                <button onclick="showScreen('arcade')" data-help-title="Jeu d'Arcade Spatial" data-help="Détruis les astéroïdes avec ton vaisseau laser avant qu'ils ne touchent le bouclier !" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold px-3 py-1.5 rounded-2xl shadow transition flex items-center gap-1 text-xs sm:text-sm">
+                    <span>🚀</span>
+                    <span class="hidden sm:inline">Arcade</span>
+                </button>
+
+                <!-- Défis & Robot -->
+                <button onclick="showScreen('challenges')" data-help-title="Défis & Course Robot" data-help="Affronte le chronomètre (Sprint 30s) ou fais la course contre le Robot de Léo !" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-3 py-1.5 rounded-2xl shadow transition flex items-center gap-1 text-xs sm:text-sm">
+                    <span>⚡</span>
+                    <span class="hidden sm:inline">Défis</span>
+                </button>
+
+                <!-- Aide -->
+                <button onclick="openHelpModal()" id="btn-help" data-help-title="Aide & Info-bulles" data-help="Ouvre le guide d'aide illustré ou active/désactive les info-bulles de Léo." class="bg-teal-100 hover:bg-teal-200 text-teal-800 font-extrabold px-2.5 py-1.5 rounded-2xl border-2 border-teal-300 text-xs transition flex items-center gap-1">
+                    <span>💡</span>
+                    <span class="hidden md:inline">Aide</span>
+                </button>
+
+                <!-- Version & Changelog -->
+                <button onclick="openChangelogModal()" id="btn-version-badge" data-help-title="Version & Nouveautés" data-help="Consulte le numéro de version et le journal complet des mises à jour." class="bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-extrabold px-2.5 py-1.5 rounded-2xl border-2 border-indigo-300 text-xs transition flex items-center gap-1">
+                    <span>📋</span>
+                    <span id="app-version-label">v2.11.1</span>
+                </button>
+
+                <!-- Son -->
+                <button onclick="toggleSound()" id="btn-sound" data-help-title="Son & Musique" data-help="Active ou coupe les effets sonores et la voix de Léo." class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-1.5 rounded-2xl border-2 border-slate-300 transition text-sm" title="Activer/Couper le son">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== BANNIÈRE DE BIENVENUE PROFIL ==================== -->
+    <div id="profile-greeting-toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-lg bg-white border-4 border-emerald-400 rounded-3xl shadow-2xl p-4 flex items-center gap-4">
+        <div id="greeting-toast-avatar" class="text-4xl bg-emerald-100 w-14 h-14 rounded-2xl flex items-center justify-center shrink-0">🦊</div>
+        <div class="flex-1">
+            <h4 id="greeting-toast-title" class="font-extrabold text-emerald-900 text-base sm:text-lg">Bonjour !</h4>
+            <p id="greeting-toast-msg" class="text-xs sm:text-sm text-slate-600 font-medium"></p>
+        </div>
+        <button onclick="document.getElementById('profile-greeting-toast').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 font-bold px-2">✕</button>
+    </div>
+
+    <!-- ==================== CONTENU PRINCIPAL ==================== -->
+    <main class="max-w-6xl w-full mx-auto px-3 sm:px-4 py-4 flex-1">
+
+        <!-- ÉCRAN 1 : CARTE DES MONDES -->
+        <section id="screen-map" class="space-y-6">
+            <!-- Bannière d'accueil élève -->
+            <div class="bg-white/95 rounded-3xl p-5 shadow-lg border-4 border-sky-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div id="welcome-avatar" class="text-5xl bg-amber-100 p-3.5 rounded-3xl border-2 border-amber-300">🦊</div>
+                    <div>
+                        <h2 id="welcome-heading" class="text-xl sm:text-2xl font-extrabold text-slate-800">Bonjour ! Prêt à explorer les mondes ?</h2>
+                        <p class="text-slate-600 text-sm">Chaque monde possède <strong>3 épreuves</strong> pour débloquer son <strong>avatar</strong> et sa <strong>vignette collector</strong> !</p>
+                        <div class="flex flex-wrap gap-2 mt-2.5">
+                            <button onclick="openProfilesModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-1.5 rounded-xl border border-emerald-300 transition">
+                                👨‍👩‍👧‍👦 Changer d'enfant
+                            </button>
+                            <button onclick="toggleAdminMode()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1.5 rounded-xl border border-rose-300 transition">
+                                🔑 <span id="btn-admin-banner-text">Mode Admin : OFF</span>
+                            </button>
+                            <span id="welcome-arcade-record" class="bg-purple-50 text-purple-800 font-bold text-xs px-3 py-1.5 rounded-xl border border-purple-200">
+                                🏆 Record Arcade : 0 pts
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé des récompenses -->
+                <div class="grid grid-cols-5 gap-1.5 w-full md:w-auto">
+                    <div onclick="openTrophiesModal()" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 rounded-2xl p-2 text-center transition">
+                        <div class="text-lg">🖼️</div>
+                        <div id="count-stickers" class="font-extrabold text-amber-800 text-xs">0 / 18</div>
+                        <div class="text-[9px] font-bold text-amber-600 uppercase">Vignettes</div>
+                    </div>
+                    <div onclick="openProfilesModal()" class="cursor-pointer bg-pink-50 hover:bg-pink-100 border-2 border-pink-200 rounded-2xl p-2 text-center transition">
+                        <div class="text-lg">🦊</div>
+                        <div id="count-avatars" class="font-extrabold text-pink-800 text-xs">8</div>
+                        <div class="text-[9px] font-bold text-pink-600 uppercase">Avatars</div>
+                    </div>
+                    <div onclick="openTrophiesModal()" class="cursor-pointer bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 rounded-2xl p-2 text-center transition">
+                        <div class="text-lg">🏅</div>
+                        <div id="count-badges" class="font-extrabold text-emerald-800 text-xs">0</div>
+                        <div class="text-[9px] font-bold text-emerald-600 uppercase">Badges</div>
+                    </div>
+                    <div onclick="openTrophiesModal()" class="cursor-pointer bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-2xl p-2 text-center transition">
+                        <div class="text-lg">👑</div>
+                        <div id="count-crowns" class="font-extrabold text-purple-800 text-xs">0</div>
+                        <div class="text-[9px] font-bold text-purple-600 uppercase">Couronnes</div>
+                    </div>
+                    <div onclick="openTrophiesModal()" class="cursor-pointer bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 rounded-2xl p-2 text-center transition">
+                        <div class="text-lg">📜</div>
+                        <div id="count-diplomas" class="font-extrabold text-sky-800 text-xs">0</div>
+                        <div class="text-[9px] font-bold text-sky-600 uppercase">Diplômes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 11 Mondes d'Aventure -->
+            <div>
+                <h3 class="text-lg sm:text-xl font-extrabold text-slate-800 mb-3 flex items-center gap-2">
+                    <span>🗺️</span> Les 11 Mondes d'Apprentissage Progressif
+                </h3>
+                <div id="levels-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- 7 Mondes Bonus -->
+            <div class="pt-3 border-t-4 border-dashed border-amber-300">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">✨</span>
+                        <h3 class="text-lg sm:text-xl font-extrabold text-slate-800">Mondes Bonus & Spéciaux</h3>
+                    </div>
+                    <span class="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-extrabold px-3 py-1 rounded-full">
+                        🐉 DBZ • 🕷️ Spider-Man • 🥷 Naruto • 🤖 Iron Man • ⚽ PSG • 🔢 Chiffres • ⚡ Dresseurs
+                    </span>
+                </div>
+                <div id="bonus-levels-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
+
+        <!-- ÉCRAN 2 : ENTRAÎNEMENT & MINI-JEUX (TOUT VISIBLE SANS DÉFILEMENT) -->
+        <section id="screen-practice" class="hidden space-y-2.5">
+            <!-- Barre de contrôle compacte -->
+            <div class="bg-white/95 rounded-2xl px-3 py-2 shadow-sm border-2 border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <button onclick="showScreen('map')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 text-xs sm:text-sm">
+                        ⬅️ Carte
+                    </button>
+                    <div>
+                        <span id="lesson-badge" class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Monde 1</span>
+                        <h2 id="lesson-title" class="text-sm sm:text-base font-extrabold text-slate-800 leading-tight">Les Touches Repères</h2>
+                    </div>
+                </div>
+
+                <!-- Sélecteur des 3 épreuves -->
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button onclick="switchTrial(0)" id="tab-trial-0" class="px-2.5 py-1 rounded-lg text-xs font-extrabold transition">1. Clavier</button>
+                    <button onclick="switchTrial(1)" id="tab-trial-1" class="px-2.5 py-1 rounded-lg text-xs font-bold transition">2. Mini-Jeu 1</button>
+                    <button onclick="switchTrial(2)" id="tab-trial-2" class="px-2.5 py-1 rounded-lg text-xs font-bold transition">3. Mini-Jeu 2</button>
+                </div>
+
+                <!-- Statistiques + Clavier Invisible -->
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleBlindKeyboard()" id="btn-blind-keyboard" data-help-title="Mode Clavier Invisible" data-help="Masque les lettres sur les touches pour tester ta mémoire !" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-extrabold px-2.5 py-1 rounded-xl border border-indigo-300 text-xs transition flex items-center gap-1">
+                        <span>👁️</span> <span class="hidden sm:inline">Clavier</span>
+                    </button>
+                    <div class="bg-sky-50 border border-sky-200 rounded-xl px-2.5 py-1 text-center">
+                        <div class="text-[9px] font-bold text-sky-600 uppercase">Vitesse</div>
+                        <div id="live-wpm" class="text-xs sm:text-sm font-extrabold text-sky-800">0 MPM</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1 text-center">
+                        <div class="text-[9px] font-bold text-emerald-600 uppercase">Précision</div>
+                        <div id="live-acc" class="text-xs sm:text-sm font-extrabold text-emerald-800">100%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scène d'animation des mini-jeux (Épreuves 2 et 3) -->
+            <div id="trial-minigame-stage" class="hidden relative rounded-2xl overflow-hidden shadow border-2 border-amber-300 bg-sky-200 h-28 sm:h-32">
+                <canvas id="trial-canvas" class="w-full h-full block"></canvas>
+                <div id="trial-stage-banner" class="absolute top-1.5 left-2.5 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[11px] font-extrabold text-slate-800 shadow-sm">
+                    🐒 Défi en cours !
+                </div>
+            </div>
+
+            <!-- Zone des mots à taper -->
+            <div id="typing-box" class="bg-white rounded-2xl p-3 sm:p-4 shadow border-2 border-amber-300 relative overflow-hidden">
+                <div class="w-full bg-slate-100 h-2 rounded-full mb-2 overflow-hidden">
+                    <div id="lesson-progress-bar" class="bg-gradient-to-r from-amber-400 to-emerald-500 h-full rounded-full transition-all duration-200" style="width: 0%"></div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+                    <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full font-semibold text-amber-800">
+                        <span>🦊</span> <span id="leo-hint-text">Place tes index sur F et J !</span>
+                    </span>
+                    <span class="font-bold text-slate-600">
+                        Doigt : <span id="finger-instruction" class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-extrabold">Index Gauche</span>
+                    </span>
+                </div>
+
+                <div id="target-text-container" class="mono-font text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wide leading-snug text-center py-2 px-1 flex flex-wrap justify-center items-center gap-x-2 gap-y-1.5 select-none">
+                </div>
+            </div>
+
+            <!-- Clavier virtuel guidé -->
+            <div class="bg-slate-800 p-2 sm:p-3 rounded-2xl shadow-lg border-2 border-slate-700">
+                <div id="virtual-keyboard" class="max-w-3xl mx-auto space-y-1 sm:space-y-1.5"></div>
+            </div>
+        </section>
+
+        <!-- ÉCRAN 3 : JEU D'ARCADE SPATIAL -->
+        <section id="screen-arcade" class="hidden space-y-4">
+            <div class="bg-slate-900 text-white rounded-3xl p-4 shadow-xl border-4 border-purple-500 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="stopArcadeAndReturn()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-2xl border border-slate-600 transition text-sm">
+                        ⬅️ Quitter
+                    </button>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-amber-300 flex items-center gap-2">
+                            <span>🚀</span> Mission Spatiale : Pluie de Lettres
+                        </h2>
+                        <p class="text-xs text-slate-300">Tape la lettre des astéroïdes pour tirer au laser avant qu'ils ne touchent ton bouclier !</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-800 px-3 py-1.5 rounded-2xl border border-slate-700 text-center">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Score</div>
+                        <div id="arcade-score" class="text-lg font-extrabold text-emerald-400">0</div>
+                    </div>
+                    <div class="bg-slate-800 px-3 py-1.5 rounded-2xl border border-slate-700 text-center">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Temps</div>
+                        <div id="arcade-timer" class="text-lg font-extrabold text-sky-400">60s</div>
+                    </div>
+                    <div class="bg-slate-800 px-3 py-1.5 rounded-2xl border border-slate-700 text-center">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Vies</div>
+                        <div id="arcade-lives" class="text-lg font-extrabold text-rose-400">❤️❤️❤️❤️❤️</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative bg-slate-950 rounded-3xl overflow-hidden shadow-2xl border-4 border-indigo-500 h-[400px] sm:h-[440px]">
+                <canvas id="arcade-canvas" class="w-full h-full block"></canvas>
+                <div id="arcade-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center text-white">
+                    <div class="text-6xl mb-2">🛸</div>
+                    <h3 id="arcade-overlay-title" class="text-2xl sm:text-3xl font-extrabold text-amber-300 mb-2">Prêt pour le décollage ?</h3>
+                    <p id="arcade-overlay-desc" class="text-slate-300 max-w-md mb-4 text-sm">Choisis ton niveau de difficulté puis appuie sur les touches correspondantes pour pulvériser les astéroïdes !</p>
+
+                    <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-700 mb-5 text-xs font-extrabold">
+                        <button onclick="setArcadeDifficulty('easy')" id="arcade-diff-easy" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 transition">🐢 Facile</button>
+                        <button onclick="setArcadeDifficulty('medium')" id="arcade-diff-medium" class="px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-white transition">🐇 Moyen</button>
+                        <button onclick="setArcadeDifficulty('hard')" id="arcade-diff-hard" class="px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-white transition">🐆 Difficile</button>
+                    </div>
+
+                    <button onclick="startArcadeGame()" class="bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-slate-950 font-extrabold text-lg px-8 py-3.5 rounded-2xl shadow-xl transition">
+                        Lancer la Mission 🚀
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ÉCRAN 4 : DÉFIS CHRONO & COURSE ROBOT -->
+        <section id="screen-challenges" class="hidden space-y-3">
+            <div class="bg-white/95 rounded-2xl px-4 py-2.5 shadow-sm border-2 border-amber-300 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <button onclick="stopChallengesAndReturn()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition text-xs sm:text-sm">
+                        ⬅️ Carte
+                    </button>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-slate-800 leading-tight">⚡ Défis Chrono & Course contre le Robot</h2>
+                        <p class="text-[11px] text-slate-500 hidden sm:block">Choisis un défi puis actionne le signal de départ de l'arbitre !</p>
+                    </div>
+                </div>
+                <div class="bg-amber-50 border-2 border-amber-200 px-3 py-1 rounded-xl text-xs font-extrabold text-amber-800">
+                    🏆 Record Sprint 30s : <span id="sprint-best-badge">0 mots</span>
+                </div>
+            </div>
+
+            <!-- Arène active des défis (placée en haut pour être 100% visible sans défilement) -->
+            <div id="challenge-arena" class="hidden bg-white rounded-3xl p-4 shadow-xl border-4 border-emerald-400 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span id="challenge-mode-label" class="bg-emerald-100 text-emerald-800 font-extrabold text-xs px-3 py-1 rounded-full">DÉFI PRÊT</span>
+                        <span id="referee-badge" class="bg-amber-100 text-amber-900 font-extrabold text-xs px-3 py-1 rounded-full">🦊 Arbitre : En attente du départ</span>
+                    </div>
+                    <div id="challenge-status-text" class="text-base sm:text-lg font-extrabold text-slate-800">30s • 0 mot</div>
+                </div>
+
+                <!-- Bouton Arbitre de départ -->
+                <div id="referee-start-panel" class="bg-gradient-to-r from-amber-50 via-yellow-50 to-emerald-50 border-2 border-amber-300 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 text-left">
+                        <span class="text-3xl">🦊🏁</span>
+                        <div>
+                            <div class="font-extrabold text-slate-800 text-sm">Léo l'Arbitre est prêt !</div>
+                            <div id="referee-instruction" class="text-xs text-slate-600">Place tes doigts sur le clavier, lis le premier mot ci-dessous, puis clique sur le signal de départ.</div>
+                        </div>
+                    </div>
+                    <button onclick="triggerRefereeStart()" id="btn-referee-go" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold px-5 py-2.5 rounded-2xl shadow-lg ring-4 ring-amber-400 animate-pulse text-sm transition shrink-0">
+                        🚦 Donner le départ !
+                    </button>
+                </div>
+
+                <!-- Piste de course -->
+                <div class="space-y-1.5 bg-slate-100 p-2.5 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-extrabold w-16 text-emerald-700">Toi 🦊</span>
+                        <div class="flex-1 bg-white h-6 rounded-full p-0.5 border border-slate-300 relative overflow-hidden">
+                            <div id="challenge-player-runner" class="text-base leading-none transition-all duration-150" style="margin-left: 0%">🦊</div>
+                        </div>
+                        <span class="text-sm">🏁</span>
+                    </div>
+                    <div id="challenge-robot-track" class="hidden flex items-center gap-2">
+                        <span class="text-xs font-extrabold w-16 text-sky-700">Robot 🤖</span>
+                        <div class="flex-1 bg-white h-6 rounded-full p-0.5 border border-slate-300 relative overflow-hidden">
+                            <div id="challenge-robot-runner" class="text-base leading-none transition-all duration-100" style="margin-left: 0%">🤖</div>
+                        </div>
+                        <span class="text-sm">🏁</span>
+                    </div>
+                </div>
+
+                <div id="challenge-target-display" class="mono-font text-xl sm:text-3xl font-extrabold text-center py-3 px-3 bg-amber-50 rounded-2xl border-2 border-amber-300 flex flex-wrap justify-center gap-x-3 gap-y-1.5"></div>
+                <div id="challenge-feedback" class="text-center text-xs sm:text-sm font-bold text-slate-600">Clique sur « 🚦 Donner le départ ! » quand tu es prêt !</div>
+            </div>
+
+            <!-- Cartes de sélection des défis -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Carte Sprint 30s -->
+                <div class="bg-white rounded-3xl p-4 shadow-md border-4 border-amber-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-3xl">⏱️</span>
+                            <span class="bg-amber-100 text-amber-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">30 SECONDES</span>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-slate-800">Le Défi Sprint 30s</h3>
+                        <p class="text-xs text-slate-600 mt-1 mb-2.5">Tape un maximum de mots en 30 secondes pour gagner la médaille <strong>Tortue 🐢 → Lièvre 🐇 → Guépard 🐆 → Fusée 🚀</strong> !</p>
+                        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-extrabold mb-2.5">
+                            <button onclick="setSprintDifficulty('easy')" id="sprint-diff-easy" class="flex-1 py-1 rounded-lg bg-amber-500 text-white">🐢 Facile</button>
+                            <button onclick="setSprintDifficulty('medium')" id="sprint-diff-medium" class="flex-1 py-1 rounded-lg text-slate-600">🐇 Moyen</button>
+                            <button onclick="setSprintDifficulty('hard')" id="sprint-diff-hard" class="flex-1 py-1 rounded-lg text-slate-600">🐆 Difficile</button>
+                        </div>
+                    </div>
+                    <button onclick="startSprintChallenge()" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-extrabold py-2.5 rounded-2xl shadow text-sm transition">
+                        ⏱️ Préparer le Sprint 30s !
+                    </button>
+                </div>
+
+                <!-- Carte Course Robot -->
+                <div class="bg-white rounded-3xl p-4 shadow-md border-4 border-sky-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-3xl">🤖</span>
+                            <span class="bg-sky-100 text-sky-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">DUEL VITESSE</span>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-slate-800">Course contre le Robot de Léo</h3>
+                        <p class="text-xs text-slate-600 mt-1 mb-2.5">Choisis la vitesse du robot, prépare-toi sur la ligne de départ et franchis l'arrivée avant lui !</p>
+                        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-extrabold mb-2.5">
+                            <button onclick="setRobotDifficulty('easy')" id="robot-diff-easy" class="flex-1 py-1 rounded-lg bg-sky-500 text-white">🐢 Facile</button>
+                            <button onclick="setRobotDifficulty('medium')" id="robot-diff-medium" class="flex-1 py-1 rounded-lg text-slate-600">🐇 Moyen</button>
+                            <button onclick="setRobotDifficulty('hard')" id="robot-diff-hard" class="flex-1 py-1 rounded-lg text-slate-600">🐆 Difficile</button>
+                        </div>
+                    </div>
+                    <button onclick="startRobotRaceChallenge()" class="w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold py-2.5 rounded-2xl shadow text-sm transition">
+                        🤖 Préparer la Course !
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== MODALES ==================== -->
+
+    <!-- 1. MODALE INTRO AU LANCEMENT DU JEU -->
+    <div id="modal-welcome-splash" class="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-[95] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 text-center shadow-2xl border-4 border-amber-400">
+            <div class="text-6xl mb-2">🦊✨⌨️</div>
+            <span class="inline-block bg-amber-100 text-amber-800 text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
+                Bienvenue sur ClavierMagique !
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2">
+                Prêt pour une grande aventure sur le clavier ?
+            </h2>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed mb-4">
+                Avec <strong>Léo le Renard</strong>, tu vas jouer, apprendre à placer tes doigts comme un champion, voyager dans la <strong>Savane, l'Espace, les Royaumes et les Mondes Bonus</strong>, et collectionner plein de trophées !
+            </p>
+
+            <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 mb-5 text-xs sm:text-sm text-sky-900 font-semibold leading-relaxed">
+                🏫 <strong>ÉDITION SPÉCIALE</strong><br>
+                Application conçue par <strong class="text-indigo-700">WadeWilson</strong> en collaboration avec <strong class="text-indigo-700">Angéline Lenormand</strong> (Enseignante Spécialisée, RASED) pour l'<strong>École Notre-Dame de Saint-Sauveur-le-Vicomte</strong>.
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button onclick="startWelcomeAdventure()" class="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:opacity-95 text-white font-extrabold text-base sm:text-lg px-7 py-3.5 rounded-2xl shadow-xl transition">
+                    🎮 C'est parti pour l'aventure !
+                </button>
+                <button onclick="openDeveloperContactModal()" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm px-4 py-3.5 rounded-2xl border border-slate-300 transition">
+                    ✉️ Contacter le développeur
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODALE CONTACT DÉVELOPPEUR (AU PREMIER PLAN z-[110]) -->
+    <div id="modal-dev-contact" class="hidden fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-indigo-400">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl">✉️🦊</span>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Contacter le développeur</h3>
+                        <p class="text-xs text-slate-500">Message destiné à WadeWilson</p>
+                    </div>
+                </div>
+                <button onclick="closeDeveloperContactModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+            </div>
+
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Objet</label>
+                    <input id="dev-contact-subject" type="text" value="Demande" class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-200 font-bold text-slate-800 bg-slate-50 focus:border-indigo-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Votre message</label>
+                    <textarea id="dev-contact-body" rows="4" placeholder="Écrivez votre demande, remarque ou suggestion ici..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 text-sm text-slate-800 focus:border-indigo-400 focus:outline-none"></textarea>
+                </div>
+                <div id="dev-contact-feedback" class="hidden text-xs font-bold p-2.5 rounded-xl"></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeDeveloperContactModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm">Annuler</button>
+                    <button onclick="sendDeveloperContactForm()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow">Envoyer 📨</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODALE CINÉMATIQUE D'INTRO & CONCLUSION DE MONDE -->
+    <div id="modal-cinema" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 text-center shadow-2xl border-4 border-amber-400">
+            <span id="cinema-badge" class="inline-block bg-indigo-100 text-indigo-800 text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
+                🎬 INTRODUCTION DU MONDE
+            </span>
+            <h3 id="cinema-title" class="text-2xl font-extrabold text-slate-800 mb-2">Titre du Monde</h3>
+
+            <div class="rounded-2xl overflow-hidden border-2 border-slate-200 mb-3 h-40 bg-slate-900">
+                <canvas id="cinema-canvas" class="w-full h-full block"></canvas>
+            </div>
+
+            <p id="cinema-story" class="text-sm text-slate-600 font-medium mb-3 leading-relaxed"></p>
+
+            <div id="cinema-rewards-box" class="hidden bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 mb-4">
+                <div id="cinema-rewards-icons" class="text-3xl mb-1">🐒 🌴</div>
+                <div id="cinema-rewards-label" class="text-xs font-extrabold text-amber-900">Nouveaux cadeaux débloqués !</div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <button onclick="replayCinemaMusic()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2.5 rounded-2xl text-xs transition">
+                    🎵 Musique
+                </button>
+                <button id="cinema-secondary-btn" onclick="closeCinemaAndGoMap()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold px-4 py-2.5 rounded-2xl text-sm transition">
+                    🗺️ Carte
+                </button>
+                <button id="cinema-primary-btn" onclick="confirmCinemaAction()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold px-6 py-2.5 rounded-2xl shadow-lg text-sm transition">
+                    🚀 Commencer l'Épreuve 1 !
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MODALE VICTOIRE D'ÉPREUVE -->
+    <div id="modal-victory" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-amber-400">
+            <div class="text-5xl mb-1">🎉🦊🎉</div>
+            <h3 id="victory-title" class="text-2xl font-extrabold text-slate-800">Bravo !</h3>
+            <p id="victory-subtitle" class="text-slate-600 text-sm mt-1">Tu as réussi cette épreuve avec brio !</p>
+
+            <div id="victory-stars" class="flex justify-center gap-2 text-4xl my-3">
+                <span>⭐</span><span>⭐</span><span>⭐</span>
+            </div>
+
+            <div id="victory-reward-box" class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
+                <div id="victory-reward-icon" class="text-3xl bg-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border border-amber-200 shrink-0">🏅</div>
+                <div>
+                    <div id="victory-reward-tag" class="text-[10px] font-extrabold uppercase text-amber-600">Récompense</div>
+                    <div id="victory-reward-name" class="font-extrabold text-slate-800 text-sm">Cadeau</div>
+                    <div id="victory-reward-desc" class="text-[11px] text-slate-500">Ajouté à ta collection</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200 mb-5">
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Vitesse</div>
+                    <div id="victory-wpm" class="text-lg font-extrabold text-sky-600">15 MPM</div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Précision</div>
+                    <div id="victory-acc" class="text-lg font-extrabold text-emerald-600">98%</div>
+                </div>
+            </div>
+
+            <div class="flex gap-2.5 justify-center">
+                <button onclick="requestVictoryAction('retry')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition text-sm">
+                    🔄 Rejouer
+                </button>
+                <button onclick="requestVictoryAction('next')" id="btn-next-level" class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold py-3 rounded-2xl shadow-lg transition text-sm">
+                    Suivant ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODALE POP-UP CONFIRMATION FIN DE SÉRIE -->
+    <div id="modal-series-confirm" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-sky-400">
+            <div id="series-confirm-icon" class="text-5xl mb-2">🦊❓</div>
+            <h3 id="series-confirm-title" class="text-xl font-extrabold text-slate-800 mb-2">Confirmer ton choix</h3>
+            <p id="series-confirm-text" class="text-sm text-slate-600 mb-5 leading-relaxed">
+                Veux-tu vraiment refaire ce monde ou partir vers un nouveau monde ?
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeSeriesConfirmModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-2xl text-sm">
+                    Annuler
+                </button>
+                <button onclick="executeConfirmedVictoryAction()" id="series-confirm-ok-btn" class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-extrabold py-2.5 rounded-2xl shadow text-sm">
+                    Oui, c'est parti !
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODALE PROFILS ENFANTS -->
+    <div id="modal-profiles" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-emerald-400">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-3xl">👨‍👩‍👧‍👦</span>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Profils des Élèves</h3>
+                        <p class="text-xs text-slate-500">Chaque enfant sauvegarde ses propres étoiles</p>
+                    </div>
+                </div>
+                <button onclick="closeProfilesModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+            </div>
+
+            <div id="profiles-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-44 overflow-y-auto mb-4"></div>
+
+            <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 mb-4">
+                <h4 class="text-xs font-extrabold text-emerald-900 uppercase mb-2">➕ Créer un nouvel élève</h4>
+                <div class="flex flex-col sm:flex-row gap-2 mb-2.5">
+                    <input id="new-profile-name" type="text" maxlength="16" placeholder="Prénom de l'enfant..." class="flex-1 px-3 py-2 rounded-xl border-2 border-emerald-300 font-bold text-slate-800 text-sm focus:outline-none">
+                    <button onclick="createNewProfile()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-sm">Ajouter</button>
+                </div>
+                <div id="avatar-selector" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span class="font-bold text-slate-500">💾 Sauvegarde classe :</span>
+                <div class="flex gap-2">
+                    <button onclick="exportProgressJSON()" class="bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-3 py-1.5 rounded-xl">⬇️ Exporter</button>
+                    <label class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-3 py-1.5 rounded-xl cursor-pointer">
+                        ⬆️ Importer
+                        <input type="file" accept=".json" onchange="importProgressJSON(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. MODALE ALBUM & DIPLÔME -->
+    <div id="modal-trophies" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border-4 border-amber-300 max-h-[88vh] overflow-y-auto">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">🏆</span>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Album des Récompenses & Progrès</h3>
+                        <p class="text-xs text-slate-500">Termine les 3 épreuves d'un monde pour débloquer son cadeau</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openDiplomaPrintModal()" class="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-extrabold px-4 py-2 rounded-2xl shadow text-xs">
+                        📜 Imprimer mon Diplôme
+                    </button>
+                    <button onclick="closeTrophiesModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <h4 class="text-xs font-extrabold uppercase text-amber-700 mb-2">🖼️ Album des Vignettes Collector</h4>
+                <div id="stickers-album-grid" class="grid grid-cols-3 sm:grid-cols-6 gap-2"></div>
+            </div>
+
+            <div class="mb-5 bg-sky-50 border-2 border-sky-200 rounded-2xl p-3">
+                <h4 class="text-xs font-extrabold uppercase text-sky-800 mb-1">📊 Touches à bien entraîner</h4>
+                <div id="difficult-keys-summary" class="flex flex-wrap gap-2 text-xs font-bold text-slate-700"></div>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-extrabold uppercase text-indigo-700 mb-2">🏅 Badges & Diplômes des Mondes</h4>
+                <div id="trophies-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. MODALE DIPLÔME IMPRIMABLE -->
+    <div id="modal-diploma" class="hidden fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-amber-50 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border-8 border-double border-amber-500 text-center">
+            <div class="text-5xl mb-2">🎓🦊🏆</div>
+            <div class="text-xs font-extrabold uppercase tracking-widest text-amber-700 mb-1">Certificat Officiel de Dactylographie</div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3">Diplôme ClavierMagique</h2>
+            <p class="text-sm text-slate-600 mb-1">Ce diplôme d'honneur est décerné à :</p>
+            <div id="diploma-student-name" class="text-2xl sm:text-3xl font-extrabold text-indigo-700 bg-white border-2 border-amber-300 rounded-2xl py-2.5 px-6 inline-block my-2 shadow-sm">
+                🦊 Aventurier
+            </div>
+            <p class="text-sm text-slate-700 max-w-md mx-auto mt-2 mb-4">
+                Pour ses brillants progrès dans l'apprentissage du clavier, sa précision et sa persévérance !
+            </p>
+            <div class="grid grid-cols-3 gap-3 bg-white p-3 rounded-2xl border-2 border-amber-200 mb-4 text-xs">
+                <div>
+                    <div class="text-slate-400 font-bold uppercase">Étoiles</div>
+                    <div id="diploma-stars" class="text-lg font-extrabold text-amber-600">0 ⭐</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold uppercase">Vignettes</div>
+                    <div id="diploma-stickers" class="text-lg font-extrabold text-pink-600">0 / 18</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold uppercase">Record Sprint</div>
+                    <div id="diploma-sprint" class="text-lg font-extrabold text-emerald-600">0 mots</div>
+                </div>
+            </div>
+            <div id="diploma-date" class="text-xs text-slate-500 font-semibold mb-4"></div>
+            <div class="flex justify-center gap-3 no-print">
+                <button onclick="closeDiplomaPrintModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2.5 rounded-2xl text-sm">Fermer</button>
+                <button onclick="window.print()" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold px-6 py-2.5 rounded-2xl shadow text-sm">🖨️ Imprimer / PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. MODALE ATELIER ENSEIGNANT -->
+    <div id="modal-teacher" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-indigo-400">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-3xl">👩‍🏫</span>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Atelier de l'Enseignant</h3>
+                        <p class="text-xs text-slate-500">Personnalise l'épreuve 1 du Monde 9 (dictée, mots de la semaine...)</p>
+                    </div>
+                </div>
+                <button onclick="closeTeacherModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+            </div>
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Titre de la leçon</label>
+                    <input id="teacher-title-input" type="text" placeholder="Ex : Mots de la semaine" class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-200 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Mots ou phrase à recopier</label>
+                    <textarea id="teacher-words-input" rows="3" placeholder="Ex : ecole cahier stylo cartable" class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-200 mono-font font-bold text-slate-800"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeTeacherModal()" class="px-4 py-2 rounded-xl bg-slate-100 font-bold text-slate-600 text-sm">Annuler</button>
+                    <button onclick="saveTeacherCustomExercise()" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-extrabold text-sm">Enregistrer & Lancer 🚀</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. MODALE GUIDE D'AIDE & INFO-BULLES -->
+    <div id="modal-help" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border-4 border-teal-400">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-3xl">💡🦊</span>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Guide d'Aide ClavierMagique</h3>
+                        <p class="text-xs text-slate-500">Survole n'importe quel bouton ou monde pour voir son astuce !</p>
+                    </div>
+                </div>
+                <button onclick="closeHelpModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+            </div>
+
+            <div class="bg-teal-50 border-2 border-teal-200 rounded-2xl p-3 mb-4 flex items-center justify-between">
+                <span class="text-xs font-extrabold text-teal-900">💬 Info-bulles de Léo au survol de la souris</span>
+                <button onclick="toggleTooltipsEnabled()" id="btn-toggle-tooltips" class="bg-teal-600 text-white font-extrabold px-3 py-1 rounded-xl text-xs">
+                    ✅ Activées
+                </button>
+            </div>
+
+            <div class="space-y-2 text-xs text-slate-700 mb-5">
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200"><strong>🧭 Les 11 Mondes + 7 Bonus :</strong> Progresse étape par étape des repères F et J jusqu'aux majuscules, accents et chiffres.</div>
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200"><strong>🚀 Arcade & ⚡ Défis :</strong> Entraîne ta vitesse avec la Pluie d'Astéroïdes, le Sprint 30s ou la Course contre le Robot !</div>
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200"><strong>🔑 Mode Admin :</strong> Permet à l'enseignant de déverrouiller tous les mondes instantanément.</div>
+            </div>
+
+            <div class="text-right">
+                <button onclick="closeHelpModal()" class="bg-teal-600 hover:bg-teal-700 text-white font-extrabold px-6 py-2.5 rounded-2xl text-sm">J'ai compris !</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. MODALE JOURNAL DES MISES À JOUR (CHANGELOG) -->
+    <div id="modal-changelog" class="hidden fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border-4 border-indigo-400">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">📋🦊</span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl font-extrabold text-slate-800">Journal des Mises à Jour</h3>
+                            <span id="changelog-current-pill" class="bg-indigo-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full">v2.11.1</span>
+                        </div>
+                        <p class="text-xs text-slate-500">Historique complet des fonctionnalités et corrections</p>
+                    </div>
+                </div>
+                <button onclick="closeChangelogModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">✕</button>
+            </div>
+
+            <div id="changelog-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 mb-4 text-left"></div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500">Version installée : <strong id="changelog-footer-ver" class="text-indigo-700">v2.11.1</strong></span>
+                <button onclick="closeChangelogModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-6 py-2 rounded-2xl text-sm">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO-BULLE FLOTTANTE -->
+    <div id="leo-tooltip" class="hidden fixed z-[120] max-w-xs bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border-2 border-amber-400 pointer-events-none">
+        <div class="flex items-center gap-1.5 text-amber-300 font-extrabold text-xs mb-0.5">
+            <span>🦊</span>
+            <span id="leo-tooltip-title">Astuce de Léo</span>
+        </div>
+        <p id="leo-tooltip-body" class="text-xs text-slate-100 leading-snug"></p>
+    </div>
+
+    <!-- PIED DE PAGE -->
+    <footer class="text-center py-3 px-4 text-xs font-medium text-slate-600">
+        <div>ClavierMagique • Conçu par <strong>WadeWilson</strong> en collaboration avec <strong>Angéline Lenormand</strong> (Enseignante Spécialisée, RASED) pour l'<strong>École Notre-Dame de Saint-Sauveur-le-Vicomte</strong> ❤️</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">
+            © 2026 WadeWilson — Tous droits réservés •
+            <button onclick="openChangelogModal()" class="underline font-bold text-indigo-700 hover:text-indigo-900">Version <span id="footer-version-text">v2.11.1</span> (Nouveautés)</button>
+        </div>
+    </footer>
+
+    <!-- ==================== SCRIPT COMPLET ==================== -->
+    <script>
+        const APP_VERSION = 'v2.11.1';
+        const APP_CHANGELOG = [
+            {
+                version: 'v2.11.1',
+                date: '19/11/2026',
+                badge: 'Dernière version',
+                items: [
+                    "Correction d'une erreur de syntaxe dans le bloc script et restauration complète du moteur pédagogique AZERTY et des messages vocaux de Léo."
+                ]
+            },
+            {
+                version: 'v2.11.0',
+                date: '19/11/2026',
+                items: [
+                    "Ajout des messages vocaux d'encouragement personnalisés avec le prénom de l'élève sur tous les pop-ups (accueil, création ou changement de profil, introduction et fin de monde, victoire d'épreuve, arcade et défis)."
+                ]
+            },
+            {
+                version: 'v2.10.0',
+                date: '19/11/2026',
+                items: [
+                    "Suppression du mode QWERTY pour une application 100 % dédiée au clavier français AZERTY.",
+                    "Restauration complète des 36 mini-jeux graphiques personnalisés, de l'icône PNG 512x512 PWA et du support des accents circonflexes (^)."
+                ]
+            }
+        ];
+
+        const STORAGE_KEY = 'clavierMagique_azerty_v2';
+        const BASE_AVATARS = ['🦊', '🐱', '🐶', '🐼', '🦁', '🐸', '🐰', '🐨'];
+
+        let appState = {
+            soundEnabled: true,
+            tooltipsEnabled: true,
+            adminMode: false,
+            activeProfileId: 'default',
+            selectedNewAvatar: '🦊',
+            profiles: [],
+            currentLevelId: 1,
+            currentTrialIndex: 0,
+            targetText: '',
+            currentIndex: 0,
+            errors: 0,
+            totalKeystrokes: 0,
+            startTime: null,
+            blindKeyboard: false,
+            pendingVictoryAction: null
+        };
+
+        function createDefaultProfile(name = 'Aventurier', avatar = '🦊') {
+            return {
+                id: 'prof_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                name,
+                avatar,
+                trialStars: {},
+                unlockedAvatars: [...BASE_AVATARS],
+                unlockedStickers: [],
+                arcadeBest: 0,
+                sprintBest: 0,
+                errorCounts: {},
+                customTeacher: {
+                    title: "Atelier de l'Enseignant",
+                    text: "ecole livre crayon cahier tableau eleve"
+                }
+            };
+        }
+
+        function getActiveProfile() {
+            if (!Array.isArray(appState.profiles) || appState.profiles.length === 0) {
+                const def = createDefaultProfile('Aventurier', '🦊');
+                def.id = 'default';
+                appState.profiles = [def];
+                appState.activeProfileId = 'default';
+            }
+            return appState.profiles.find(p => p.id === appState.activeProfileId) || appState.profiles[0];
+        }
+
+        function speakFrench(text) {
+            if (!appState.soundEnabled || !('speechSynthesis' in window) || !text) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'fr-FR';
+                utter.rate = 0.98;
+                utter.pitch = 1.15;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {}
+        }
+
+        function showProfileGreetingToast(title, msg, avatar = '🦊') {
+            const toast = document.getElementById('profile-greeting-toast');
+            if (!toast) return;
+            setTextSafe('greeting-toast-avatar', avatar);
+            setTextSafe('greeting-toast-title', title);
+            setTextSafe('greeting-toast-msg', msg);
+            toast.classList.remove('hidden');
+            clearTimeout(window._greetingToastTimer);
+            window._greetingToastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5200);
+        }
+
+        function setTextSafe(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        /* =========================================================================
+           ICÔNE RENARD PWA PNG 512x512 DYNAMIQUE
+           ========================================================================= */
+        (function initFoxPWAIcon() {
+            try {
+                const c = document.createElement('canvas');
+                c.width = 512; c.height = 512;
+                const ctx = c.getContext('2d');
+                const grad = ctx.createLinearGradient(0, 0, 512, 512);
+                grad.addColorStop(0, '#f59e0b'); grad.addColorStop(1, '#ea580c');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.roundRect(0, 0, 512, 512, 112); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.moveTo(112, 184); ctx.lineTo(152, 64); ctx.lineTo(224, 152); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(400, 184); ctx.lineTo(360, 64); ctx.lineTo(288, 152); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#fff7ed';
+                ctx.beginPath(); ctx.moveTo(104, 224); ctx.quadraticCurveTo(256, 104, 408, 224);
+                ctx.quadraticCurveTo(424, 384, 256, 440); ctx.quadraticCurveTo(88, 384, 104, 224); ctx.fill();
+                ctx.fillStyle = '#fb923c';
+                ctx.beginPath(); ctx.moveTo(104, 224); ctx.quadraticCurveTo(256, 104, 408, 224);
+                ctx.quadraticCurveTo(344, 296, 256, 264); ctx.quadraticCurveTo(168, 296, 104, 224); ctx.fill();
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath(); ctx.arc(192, 272, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(320, 272, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(256, 344, 32, 24, 0, 0, Math.PI * 2); ctx.fill();
+                const pngUrl = c.toDataURL('image/png');
+                const fav = document.getElementById('dynamic-favicon');
+                const apple = document.getElementById('dynamic-apple-icon');
+                if (fav) fav.href = pngUrl;
+                if (apple) apple.href = pngUrl;
+                const manifest = {
+                    name: "ClavierMagique",
+                    short_name: "ClavierMagique",
+                    start_url: window.location.href,
+                    display: "standalone",
+                    background_color: "#fef9c3",
+                    theme_color: "#f59e0b",
+                    icons: [{ src: pngUrl, sizes: "512x512", type: "image/png" }]
+                };
+                const manEl = document.getElementById('dynamic-manifest');
+                if (manEl) manEl.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+            } catch (e) {}
+        })();
+
+        /* =========================================================================
+           CONFIGURATION CLAVIER AZERTY & DOIGTS
+           ========================================================================= */
+        const FINGER_INFO = {
+            'pinky-l':  { name: 'Auriculaire Gauche', colorClass: 'bg-pink-500 text-white border-pink-700', badgeClass: 'bg-pink-100 text-pink-800 border-pink-300' },
+            'ring-l':   { name: 'Annulaire Gauche',   colorClass: 'bg-orange-500 text-white border-orange-700', badgeClass: 'bg-orange-100 text-orange-800 border-orange-300' },
+            'middle-l': { name: 'Majeur Gauche',      colorClass: 'bg-emerald-500 text-white border-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            'index-l':  { name: 'Index Gauche',       colorClass: 'bg-sky-500 text-white border-sky-700', badgeClass: 'bg-sky-100 text-sky-800 border-sky-300' },
+            'index-r':  { name: 'Index Droit',        colorClass: 'bg-indigo-500 text-white border-indigo-700', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+            'middle-r': { name: 'Majeur Droit',       colorClass: 'bg-emerald-500 text-white border-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            'ring-r':   { name: 'Annulaire Droit',    colorClass: 'bg-orange-500 text-white border-orange-700', badgeClass: 'bg-orange-100 text-orange-800 border-orange-300' },
+            'pinky-r':  { name: 'Auriculaire Droit',  colorClass: 'bg-pink-500 text-white border-pink-700', badgeClass: 'bg-pink-100 text-pink-800 border-pink-300' },
+            'thumb':    { name: 'Pouce (Barre Espace)', colorClass: 'bg-amber-400 text-slate-900 border-amber-600', badgeClass: 'bg-amber-100 text-amber-900 border-amber-300' },
+            'shift':    { name: 'Maintiens MAJ (Shift) + Lettre', colorClass: 'bg-amber-500 text-slate-950 border-amber-700', badgeClass: 'bg-amber-100 text-amber-900 border-amber-400' }
+        };
+
+        const AZERTY_ROWS = [
+            [
+                { key: '1', finger: 'pinky-l' }, { key: '2', finger: 'ring-l', alt: 'é' }, { key: '3', finger: 'middle-l' },
+                { key: '4', finger: 'index-l' }, { key: '5', finger: 'index-l' }, { key: '6', finger: 'index-r' },
+                { key: '7', finger: 'index-r', alt: 'è' }, { key: '8', finger: 'middle-r' }, { key: '9', finger: 'ring-r', alt: 'ç' },
+                { key: '0', finger: 'pinky-r', alt: 'à' }
+            ],
+            [
+                { key: 'a', finger: 'pinky-l' }, { key: 'z', finger: 'ring-l' }, { key: 'e', finger: 'middle-l' },
+                { key: 'r', finger: 'index-l' }, { key: 't', finger: 'index-l' }, { key: 'y', finger: 'index-r' },
+                { key: 'u', finger: 'index-r' }, { key: 'i', finger: 'middle-r' }, { key: 'o', finger: 'ring-r' },
+                { key: 'p', finger: 'pinky-r' }, { key: '^', label: '^', finger: 'pinky-r' }
+            ],
+            [
+                { key: 'q', finger: 'pinky-l' }, { key: 's', finger: 'ring-l' }, { key: 'd', finger: 'middle-l' },
+                { key: 'f', finger: 'index-l', home: true }, { key: 'g', finger: 'index-l' }, { key: 'h', finger: 'index-r' },
+                { key: 'j', finger: 'index-r', home: true }, { key: 'k', finger: 'middle-r' }, { key: 'l', finger: 'ring-r' },
+                { key: 'm', finger: 'pinky-r' }
+            ],
+            [
+                { key: 'SHIFT', label: '⬆️ MAJ', finger: 'shift', shiftKey: true },
+                { key: 'w', finger: 'pinky-l' }, { key: 'x', finger: 'ring-l' }, { key: 'c', finger: 'middle-l' },
+                { key: 'v', finger: 'index-l' }, { key: 'b', finger: 'index-l' }, { key: 'n', finger: 'index-r' },
+                { key: ',', finger: 'middle-r' }, { key: ';', finger: 'ring-r' }, { key: '!', finger: 'pinky-r' }
+            ],
+            [
+                { key: ' ', label: 'ESPACE', finger: 'thumb', wide: true }
+            ]
+        ];
+
+        /* =========================================================================
+           LES 18 MONDES AZERTY (11 MONDES D'AVENTURE + 7 MONDES BONUS)
+           ========================================================================= */
+        const LEVELS_AZERTY = [
+            {
+                id: 1, title: "Les Touches Repères : F et J", world: "Monde 1 : Savane & Far-West", themeKey: "nature",
+                icon: "🌿", color: "from-emerald-400 to-green-600", border: "border-emerald-300",
+                tip: "Place tes deux index sur F et J : tu sens les petits repères sous tes doigts !",
+                trials: [
+                    { name: "1. Clavier", text: "fff jjj fjf jfj ff jj fj jf fff jjj fjf" },
+                    { name: "2. Petit Singe", text: "fjf jfj fff jjj fj jf jfj fjf ff jj fjf" },
+                    { name: "3. Cow-boy", text: "jf fj fff jjj fjf jfj ff jj fj jf jfj" }
+                ],
+                rewardAvatar: "🐒", rewardSticker: { icon: "🌴", name: "Palmier d'Or" }
+            },
+            {
+                id: 2, title: "Les Majeurs : D et K", world: "Monde 2 : Jardin Enchanté", themeKey: "forest",
+                icon: "🌻", color: "from-lime-500 to-emerald-600", border: "border-lime-300",
+                tip: "Tes majeurs se posent juste à côté de tes index, sur D et K !",
+                trials: [
+                    { name: "1. Clavier", text: "ddd kkk dkd kdk fdf jkj df jk fd kj dkf" },
+                    { name: "2. Fleur Géante", text: "df jk fd kj dkd kdk fff jjj dkf fjd kdf" },
+                    { name: "3. Papillons", text: "kdk dkd fdf jkj df fd jk kj dkf jfd kdf" }
+                ],
+                rewardAvatar: "🦋", rewardSticker: { icon: "🌻", name: "Fleur Solaire" }
+            },
+            {
+                id: 3, title: "Les Annulaires : S et L", world: "Monde 3 : Abysses & Océan", themeKey: "sea",
+                icon: "🐡", color: "from-cyan-400 to-blue-600", border: "border-cyan-300",
+                tip: "Utilise tes annulaires pour réveiller les touches S et L !",
+                trials: [
+                    { name: "1. Clavier", text: "sss lll sls lsl dsd klk fds jkl sal lad" },
+                    { name: "2. Poisson-Ballon", text: "lac sac sel sol fds jkl sls lsl dsd klk" },
+                    { name: "3. Sous-marin", text: "sol sel lac sac sal lad fds jkl sls lsl" }
+                ],
+                rewardAvatar: "🐡", rewardSticker: { icon: "💎", name: "Perle des Abysses" }
+            },
+            {
+                id: 4, title: "Les Auriculaires : Q et M", world: "Monde 4 : Royaume & Chevaliers", themeKey: "castle",
+                icon: "🏰", color: "from-amber-400 to-orange-600", border: "border-amber-300",
+                tip: "Tes petits doigts (auriculaires) s'occupent de Q à gauche et M à droite !",
+                trials: [
+                    { name: "1. Clavier", text: "qqq mmm qmq mqm ssq llm mal sac lac" },
+                    { name: "2. Château Fort", text: "mal sac lac qmq mqm fds jkl qm mq mal" },
+                    { name: "3. Tir à l'Arc", text: "lac mal sac qqq mmm ssq llm qmq mqm" }
+                ],
+                rewardAvatar: "🐉", rewardSticker: { icon: "🏰", name: "Château Royal" }
+            },
+            {
+                id: 5, title: "Le Centre : G et H", world: "Monde 5 : Grand Prix Turbo", themeKey: "race",
+                icon: "🏎️", color: "from-red-500 to-rose-600", border: "border-red-300",
+                tip: "Tes index font un petit pas vers le centre pour G et H, puis reviennent !",
+                trials: [
+                    { name: "1. Clavier", text: "fgf jhj gh hg gala flash plage cage" },
+                    { name: "2. Course Turbo", text: "gala plage flash cage fgf jhj gh hg" },
+                    { name: "3. Feux Verts", text: "flash cage gala plage fgf jhj gh hg" }
+                ],
+                rewardAvatar: "🏎️", rewardSticker: { icon: "🏁", name: "Coupe du Circuit" }
+            },
+            {
+                id: 6, title: "La Rangée du Haut : E, R, U, I", world: "Monde 6 : Nuages & Ballons", themeKey: "sky",
+                icon: "🎈", color: "from-sky-400 to-indigo-500", border: "border-sky-300",
+                tip: "Monte tes doigts d'un étage pour attraper E, R, U et I !",
+                trials: [
+                    { name: "1. Clavier", text: "rue lire rire fleur jeu feu dire lune" },
+                    { name: "2. Montgolfière", text: "fleur lune rire rue dire jeu feu lire" },
+                    { name: "3. Éclate-Ballons", text: "lire dire fleur lune rue rire jeu feu" }
+                ],
+                rewardAvatar: "🦄", rewardSticker: { icon: "🌈", name: "Arc-en-Ciel" }
+            },
+            {
+                id: 7, title: "Les Voyelles Magiques : A, O, Y", world: "Monde 7 : Pâtisserie & Chaudron", themeKey: "magic",
+                icon: "🎂", color: "from-pink-500 to-fuchsia-600", border: "border-pink-300",
+                tip: "Avec A, O et Y, tu peux maintenant écrire de vrais mots rigolos !",
+                trials: [
+                    { name: "1. Clavier", text: "papa maman chat koala robot soleil" },
+                    { name: "2. Super Gâteau", text: "koala soleil robot chat papa maman" },
+                    { name: "3. Potion Magique", text: "robot koala soleil maman papa chat" }
+                ],
+                rewardAvatar: "🧙", rewardSticker: { icon: "🧁", name: "Gâteau Étoilé" }
+            },
+            {
+                id: 8, title: "Grand Champion du Clavier", world: "Monde 8 : Galaxie & Fusées", themeKey: "space",
+                icon: "🚀", color: "from-indigo-500 to-purple-700", border: "border-indigo-300",
+                tip: "Tu connais tout le clavier ! Écris ces phrases comme un pro.",
+                trials: [
+                    { name: "1. Clavier", text: "le petit renard saute sur le clavier magique" },
+                    { name: "2. Décollage Fusée", text: "bravo champion tu sais ecrire tres vite" },
+                    { name: "3. Soucoupe", text: "la fusee decolle vers les etoiles brillantes" }
+                ],
+                rewardAvatar: "👽", rewardSticker: { icon: "🪐", name: "Anneaux de Saturne" }
+            },
+            {
+                id: 9, title: "Atelier de l'Enseignant", world: "Monde 9 : École des Magiciens", themeKey: "teacher",
+                icon: "👩‍🏫", color: "from-indigo-600 to-blue-700", border: "border-indigo-300",
+                tip: "Cet exercice peut être personnalisé avec les mots choisis par l'enseignant !",
+                isCustomTeacher: true,
+                trials: [
+                    { name: "1. Dictée Classe", text: "ecole livre crayon cahier tableau eleve" },
+                    { name: "2. Puzzle Mystère", text: "ecole livre crayon cahier tableau eleve" },
+                    { name: "3. Feu d'Artifice", text: "ecole livre crayon cahier tableau eleve" }
+                ],
+                rewardAvatar: "🦉", rewardSticker: { icon: "🎓", name: "Médaille d'Excellence" }
+            },
+            {
+                id: 10, title: "Les Majuscules : Prénoms & Villes", world: "Monde 10 : Vallée des Dinosaures", themeKey: "dino",
+                requiresCase: true, icon: "🦖", color: "from-lime-600 via-emerald-600 to-teal-700", border: "border-lime-400",
+                tip: "Maintiens la touche MAJ (Shift ⬆️) en même temps que la lettre pour écrire une majuscule !",
+                trials: [
+                    { name: "1. Majuscules", text: "Leo Paris Renard Dragon Soleil" },
+                    { name: "2. Volcan Dino", text: "Maman Papa France Lundi Mardi" },
+                    { name: "3. Course T-Rex", text: "Bravo Leo Tu Ecris Les Majuscules" }
+                ],
+                rewardAvatar: "🦖", rewardSticker: { icon: "🌋", name: "Volcan Jurassique" }
+            },
+            {
+                id: 11, title: "Les Accents & La Ponctuation", world: "Monde 11 : L'Île aux Pirates", themeKey: "pirate",
+                requiresCase: true, icon: "🏴‍☠️", color: "from-amber-600 via-red-700 to-slate-800", border: "border-amber-500",
+                tip: "Utilise les touches é, è, à, ç, l'accent ^ (î, ê) et le point d'exclamation !",
+                trials: [
+                    { name: "1. Accents", text: "école élève déjà garçon voilà !" },
+                    { name: "2. Carte Trésor", text: "pirate île trésor épée café forêt !" },
+                    { name: "3. Coffre Pirate", text: "Voilà le grand trésor des pirates !" }
+                ],
+                rewardAvatar: "🏴‍☠️", rewardSticker: { icon: "💰", name: "Coffre aux Doublons" }
+            },
+            {
+                id: 12, title: "Dragon Ball Z : Tournoi Z", world: "Monde Bonus 1 : Dragon Ball Z", themeKey: "dbz",
+                isBonus: true, bonusTag: "⚡ BONUS DBZ", alwaysUnlocked: true,
+                icon: "🐉", color: "from-amber-500 via-orange-500 to-yellow-500", border: "border-amber-400",
+                tip: "Concentre ton énergie Z sur tout le clavier pour invoquer le dragon !",
+                trials: [
+                    { name: "1. Clavier Z", text: "force dragon nuage cristal combat energie" },
+                    { name: "2. Nuage Magique", text: "super guerrier boule de cristal tournoi z" },
+                    { name: "3. Kaméhaméha", text: "kamehameha puissance infinie victoire totale" }
+                ],
+                rewardAvatar: "🐉", rewardSticker: { icon: "🔮", name: "Boule 4 Étoiles" }
+            },
+            {
+                id: 13, title: "Spider-Man : Toiles de New York", world: "Monde Bonus 2 : Spider-Man", themeKey: "spiderman",
+                isBonus: true, bonusTag: "🕷️ BONUS SPIDER", alwaysUnlocked: true,
+                icon: "🕷️", color: "from-red-600 via-rose-600 to-blue-700", border: "border-red-400",
+                tip: "Lance tes toiles avec agilité d'un gratte-ciel à l'autre !",
+                trials: [
+                    { name: "1. Clavier", text: "toile araignee ville heros saut agile" },
+                    { name: "2. Voltige Toile", text: "gratte ciel masque rouge bleu voltige" },
+                    { name: "3. Toile Capture", text: "super sens araignee protege new york" }
+                ],
+                rewardAvatar: "🕷️", rewardSticker: { icon: "🕸️", name: "Toile Héroïque" }
+            },
+            {
+                id: 14, title: "Naruto : Village de Konoha", world: "Monde Bonus 3 : Naruto", themeKey: "naruto",
+                isBonus: true, bonusTag: "🍥 BONUS NINJA", alwaysUnlocked: true,
+                icon: "🍥", color: "from-orange-500 via-amber-500 to-red-600", border: "border-orange-400",
+                tip: "Sois aussi rapide qu'un ninja de Konoha sur les touches !",
+                trials: [
+                    { name: "1. Clavier", text: "ninja village feuille vitesse equipe ami" },
+                    { name: "2. Course Ninja", text: "bandeau kunai parchemin mission secrete" },
+                    { name: "3. Rasengan", text: "rasengan tourbillon courage devenir hokage" }
+                ],
+                rewardAvatar: "🥷", rewardSticker: { icon: "🍥", name: "Tourbillon Ninja" }
+            },
+            {
+                id: 15, title: "Iron Man : Armure Mark Z", world: "Monde Bonus 4 : Iron Man", themeKey: "ironman",
+                isBonus: true, bonusTag: "🤖 BONUS ARMURE", alwaysUnlocked: true,
+                icon: "🤖", color: "from-red-600 via-amber-500 to-yellow-500", border: "border-yellow-400",
+                tip: "Active les propulseurs de l'armure rouge et or avec précision !",
+                trials: [
+                    { name: "1. Clavier", text: "armure metal casque voler moteur laser" },
+                    { name: "2. Vol Réacteur", text: "reacteur rouge et or vitesse lumiere" },
+                    { name: "3. Répulseur", text: "propulseur repulseur technologie futur" }
+                ],
+                rewardAvatar: "🤖", rewardSticker: { icon: "⚡", name: "Réacteur Arc" }
+            },
+            {
+                id: 16, title: "PSG : Soir de Match à Paris", world: "Monde Bonus 5 : Paris Saint-Germain", themeKey: "psg",
+                isBonus: true, bonusTag: "⚽ BONUS PARIS", alwaysUnlocked: true,
+                icon: "⚽", color: "from-blue-900 via-red-600 to-blue-800", border: "border-blue-400",
+                tip: "Dribble tout le terrain et marque des buts splendides au Parc !",
+                trials: [
+                    { name: "1. Clavier", text: "ballon stade equipe passe dribble match" },
+                    { name: "2. Slalom Dribble", text: "paris champion maillot bleu rouge victoire" },
+                    { name: "3. Tir au But", text: "coup franc lucarne supporters trophee but" }
+                ],
+                rewardAvatar: "⚽", rewardSticker: { icon: "🗼", name: "Tour Eiffel Rouge & Bleu" }
+            },
+            {
+                id: 17, title: "Chiffres & Codes Secrets (0 à 9)", world: "Monde Bonus 6 : Coffre-Fort Numérique", themeKey: "numbers",
+                isBonus: true, bonusTag: "🔢 BONUS CHIFFRES", alwaysUnlocked: true,
+                icon: "🔢", color: "from-cyan-600 via-blue-700 to-indigo-800", border: "border-cyan-400",
+                tip: "Découvre la rangée tout en haut du clavier pour taper les chiffres de 0 à 9 !",
+                trials: [
+                    { name: "1. Chiffres", text: "123 456 789 010 2026 100" },
+                    { name: "2. Coffre Secret", text: "10 20 30 40 50 60 70 80 90" },
+                    { name: "3. Compte Rebours", text: "code 2026 fusee 9876543210" }
+                ],
+                rewardAvatar: "🤖", rewardSticker: { icon: "🔐", name: "Coffre d'Or 2026" }
+            },
+            {
+                id: 18, title: "Tournoi des Dresseurs & Sorciers", world: "Monde Bonus 7 : Magie & Créatures", themeKey: "pokewizard",
+                isBonus: true, bonusTag: "⚡ BONUS MAGIE", alwaysUnlocked: true,
+                icon: "⚡", color: "from-yellow-400 via-amber-500 to-purple-700", border: "border-yellow-400",
+                tip: "Lance des sortilèges et attrape toutes les créatures magiques avec tes 10 doigts !",
+                trials: [
+                    { name: "1. Clavier", text: "eclair flamme dragon baguette potion" },
+                    { name: "2. Sphère Magique", text: "dresseur sorcier chateau etoile victoire" },
+                    { name: "3. Baguette", text: "Attrape la creature et lance le sort !" }
+                ],
+                rewardAvatar: "⚡", rewardSticker: { icon: "🪄", name: "Baguette Suprême" }
+            }
+        ];
+
+        function getLevelsList() {
+            const prof = getActiveProfile();
+            return LEVELS_AZERTY.map(lvl => {
+                if (lvl.isCustomTeacher && prof.customTeacher) {
+                    const txt = (prof.customTeacher.text || "ecole livre crayon").trim();
+                    return {
+                        ...lvl,
+                        title: prof.customTeacher.title || lvl.title,
+                        trials: lvl.trials.map(t => ({ ...t, text: txt }))
+                    };
+                }
+                return lvl;
+            });
+        }
+
+        /* =========================================================================
+           SAUVEGARDE & PROFILS
+           ========================================================================= */
+        function loadProgress() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    appState.soundEnabled = data.soundEnabled !== undefined ? data.soundEnabled : true;
+                    appState.tooltipsEnabled = data.tooltipsEnabled !== undefined ? data.tooltipsEnabled : true;
+                    appState.adminMode = !!data.adminMode;
+                    if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+                        appState.profiles = data.profiles;
+                        appState.activeProfileId = data.activeProfileId || data.profiles[0].id;
+                    }
+                }
+            } catch (e) {}
+            getActiveProfile();
+            updateHeaderUI();
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    soundEnabled: appState.soundEnabled,
+                    tooltipsEnabled: appState.tooltipsEnabled,
+                    adminMode: appState.adminMode,
+                    activeProfileId: appState.activeProfileId,
+                    profiles: appState.profiles
+                }));
+            } catch (e) {}
+            updateHeaderUI();
+        }
+
+        function getLevelTrials(levelId) {
+            const prof = getActiveProfile();
+            if (!prof.trialStars) prof.trialStars = {};
+            if (!Array.isArray(prof.trialStars[levelId])) prof.trialStars[levelId] = [0, 0, 0];
+            return prof.trialStars[levelId];
+        }
+
+        function getLevelTotalStars(levelId) {
+            const t = getLevelTrials(levelId);
+            return (t[0] || 0) + (t[1] || 0) + (t[2] || 0);
+        }
+
+        function isLevelSeriesCompleted(levelId) {
+            const t = getLevelTrials(levelId);
+            return t[0] >= 1 && t[1] >= 1 && t[2] >= 1;
+        }
+
+        function updateHeaderUI() {
+            const prof = getActiveProfile();
+            setTextSafe('header-profile-avatar', prof.avatar || '🦊');
+            setTextSafe('header-profile-name', prof.name || 'Aventurier');
+            setTextSafe('welcome-avatar', prof.avatar || '🦊');
+            setTextSafe('welcome-heading', `Bonjour ${prof.name} ! Prêt à explorer les mondes ?`);
+            setTextSafe('welcome-arcade-record', `🏆 Record Arcade : ${prof.arcadeBest || 0} pts`);
+            setTextSafe('sprint-best-badge', `${prof.sprintBest || 0} mots`);
+            setTextSafe('btn-sound', appState.soundEnabled ? '🔊' : '🔇');
+            setTextSafe('btn-admin-state', appState.adminMode ? 'ON' : 'OFF');
+            setTextSafe('btn-admin-banner-text', `Mode Admin : ${appState.adminMode ? 'ON' : 'OFF'}`);
+            setTextSafe('app-version-label', APP_VERSION);
+            setTextSafe('footer-version-text', APP_VERSION);
+            setTextSafe('changelog-current-pill', APP_VERSION);
+            setTextSafe('changelog-footer-ver', APP_VERSION);
+        }
+
+        function toggleAdminMode() {
+            appState.adminMode = !appState.adminMode;
+            saveProgress();
+            renderMap();
+            speakFrench(appState.adminMode ? "Mode administrateur activé. Tous les mondes sont déverrouillés." : "Mode administrateur désactivé.");
+        }
+
+        function toggleSound() {
+            appState.soundEnabled = !appState.soundEnabled;
+            saveProgress();
+        }
+
+        /* =========================================================================
+           AUDIO & SYNTHÉTISEUR (TONE.JS + SYNTHÈSE VOCALE)
+           ========================================================================= */
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.01, decay: 0.12, sustain: 0.05, release: 0.2 }
+                }).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playMelody(notes, stepMs = 120) {
+            if (!appState.soundEnabled) return;
+            try {
+                initAudio();
+                if (!synth) return;
+                if (Tone.context.state !== 'running') Tone.start();
+                const now = Tone.now() + 0.03;
+                notes.forEach((note, i) => {
+                    synth.triggerAttackRelease(note, '8n', now + (i * stepMs) / 1000);
+                });
+            } catch (e) {}
+        }
+
+        function playSound(type) {
+            if (!appState.soundEnabled) return;
+            try {
+                initAudio();
+                if (!synth) return;
+                if (Tone.context.state !== 'running') Tone.start();
+                const now = Tone.now();
+                if (type === 'key') {
+                    const notes = ['C5', 'D5', 'E5', 'G5', 'A5'];
+                    synth.triggerAttackRelease(notes[Math.floor(Math.random() * notes.length)], '16n', now);
+                } else if (type === 'error') {
+                    synth.triggerAttackRelease('F3', '16n', now);
+                } else if (type === 'win') {
+                    playMelody(['C5', 'E5', 'G5', 'C6'], 110);
+                } else if (type === 'boom') {
+                    synth.triggerAttackRelease('G2', '8n', now);
+                }
+            } catch (e) {}
+        }
+
+        function startWelcomeAdventure() {
+            const splash = document.getElementById('modal-welcome-splash');
+            if (splash) splash.classList.add('hidden');
+            const prof = getActiveProfile();
+            playMelody(['C5', 'E5', 'G5', 'A5', 'G5', 'C6'], 135);
+            speakFrench(`Bienvenue ${prof.name} sur Clavier Magique ! Choisis un monde sur la carte pour commencer ton aventure !`);
+        }
+
+        function playLaunchIntroMusic() {
+            playMelody(['C4', 'E4', 'G4', 'C5', 'E5', 'G5'], 140);
+        }
+
+        /* =========================================================================
+           MODALES : PROFILS, ALBUM, DIPLÔME, ENSEIGNANT, CONTACT, AIDE, CHANGELOG
+           ========================================================================= */
+        function openProfilesModal() {
+            renderProfilesList();
+            document.getElementById('modal-profiles').classList.remove('hidden');
+            const prof = getActiveProfile();
+            speakFrench(`Bonjour ${prof.name} ! Ici, tu peux choisir ton profil, changer ton avatar, ou inscrire un nouvel élève.`);
+        }
+
+        function closeProfilesModal() {
+            document.getElementById('modal-profiles').classList.add('hidden');
+        }
+
+        function renderProfilesList() {
+            const prof = getActiveProfile();
+            const listEl = document.getElementById('profiles-list');
+            if (listEl) {
+                listEl.innerHTML = appState.profiles.map(p => {
+                    const isActive = p.id === prof.id;
+                    const stars = Object.values(p.trialStars || {}).reduce((acc, arr) => acc + (arr[0] || 0) + (arr[1] || 0) + (arr[2] || 0), 0);
+                    return `
+                        <div onclick="selectProfile('${p.id}')" class="cursor-pointer p-3 rounded-2xl border-2 flex items-center justify-between transition ${isActive ? 'bg-emerald-50 border-emerald-500 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-emerald-300'}">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="text-2xl">${p.avatar}</span>
+                                <div class="truncate">
+                                    <div class="font-extrabold text-sm text-slate-800 truncate">${p.name}</div>
+                                    <div class="text-xs font-bold text-amber-600">⭐ ${stars} étoiles</div>
+                                </div>
+                            </div>
+                            ${isActive ? '<span class="text-[10px] font-extrabold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">Actif</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+            const avSel = document.getElementById('avatar-selector');
+            if (avSel) {
+                const avatars = prof.unlockedAvatars || BASE_AVATARS;
+                avSel.innerHTML = avatars.map(av => `
+                    <button type="button" onclick="selectAvatarForProfile('${av}')" class="w-9 h-9 rounded-xl text-xl flex items-center justify-center border-2 transition ${prof.avatar === av ? 'bg-emerald-200 border-emerald-600 scale-110' : 'bg-white border-slate-200'}">${av}</button>
+                `).join('');
+            }
+        }
+
+        function selectProfile(id) {
+            appState.activeProfileId = id;
+            saveProgress();
+            renderProfilesList();
+            renderMap();
+            const prof = getActiveProfile();
+            const msg = `Bonjour ${prof.name} ! C'est parti pour une belle aventure sur le clavier !`;
+            showProfileGreetingToast(`Bonjour ${prof.name} !`, msg, prof.avatar);
+            playMelody(['C5', 'E5', 'G5'], 110);
+            speakFrench(msg);
+        }
+
+        function selectAvatarForProfile(av) {
+            const prof = getActiveProfile();
+            prof.avatar = av;
+            appState.selectedNewAvatar = av;
+            saveProgress();
+            renderProfilesList();
+            renderMap();
+            speakFrench(`Super choix ${prof.name} ! Tu as choisi ce nouvel avatar.`);
+        }
+
+        function createNewProfile() {
+            const input = document.getElementById('new-profile-name');
+            const name = (input.value || '').trim();
+            if (!name) {
+                speakFrench("Écris d'abord le prénom de l'élève dans la case.");
+                return;
+            }
+            const np = createDefaultProfile(name, appState.selectedNewAvatar || '🦊');
+            appState.profiles.push(np);
+            appState.activeProfileId = np.id;
+            input.value = '';
+            saveProgress();
+            renderProfilesList();
+            renderMap();
+            closeProfilesModal();
+            const msg = `Bienvenue dans l'aventure ${np.name} ! Ton profil est prêt !`;
+            showProfileGreetingToast(`Bienvenue ${np.name} !`, msg, np.avatar);
+            playMelody(['C5', 'E5', 'G5', 'C6'], 120);
+            speakFrench(msg);
+        }
+
+        function exportProgressJSON() {
+            const blob = new Blob([JSON.stringify(appState.profiles, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `claviermagique_sauvegarde_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importProgressJSON(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported) && imported.length > 0) {
+                        appState.profiles = imported;
+                        appState.activeProfileId = imported[0].id;
+                        saveProgress();
+                        renderProfilesList();
+                        renderMap();
+                    }
+                } catch (err) {}
+            };
+            reader.readAsText(file);
+        }
+
+        function openTrophiesModal() {
+            const prof = getActiveProfile();
+            const levels = getLevelsList();
+            const stickersGrid = document.getElementById('stickers-album-grid');
+            if (stickersGrid) {
+                stickersGrid.innerHTML = levels.map(lvl => {
+                    const unlocked = (prof.unlockedStickers || []).includes(lvl.id) || isLevelSeriesCompleted(lvl.id);
+                    return `
+                        <div class="p-2 rounded-2xl border-2 text-center ${unlocked ? 'bg-amber-50 border-amber-300' : 'bg-slate-100 border-slate-200 opacity-60'}">
+                            <div class="text-2xl mb-1">${unlocked ? `${lvl.rewardSticker.icon}${lvl.rewardAvatar}` : '🔒'}</div>
+                            <div class="text-[10px] font-extrabold text-slate-800 truncate">${unlocked ? lvl.rewardSticker.name : `Monde ${lvl.id}`}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            const trophiesGrid = document.getElementById('trophies-grid');
+            if (trophiesGrid) {
+                trophiesGrid.innerHTML = levels.map(lvl => {
+                    const stars = getLevelTotalStars(lvl.id);
+                    return `
+                        <div class="p-3 rounded-2xl border-2 ${stars > 0 ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50 border-slate-200'}">
+                            <div class="flex justify-between items-center mb-1">
+                                <span>${lvl.icon}</span>
+                                <span class="text-xs font-extrabold text-amber-700">${stars} / 9 ⭐</span>
+                            </div>
+                            <div class="font-extrabold text-xs text-slate-800 truncate">${lvl.world}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            const diffEl = document.getElementById('difficult-keys-summary');
+            if (diffEl) {
+                const entries = Object.entries(prof.errorCounts || {}).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
+                diffEl.innerHTML = entries.length === 0
+                    ? '<span class="text-emerald-700">✅ Aucune touche difficile détectée. Bravo !</span>'
+                    : entries.map(([ch, c]) => `<span class="px-2.5 py-1 rounded-xl bg-white border border-sky-300">Touche <strong class="text-rose-600">${ch === ' ' ? 'ESPACE' : ch.toUpperCase()}</strong> (${c})</span>`).join('');
+            }
+            document.getElementById('modal-trophies').classList.remove('hidden');
+            speakFrench(`Voici ton album des récompenses ${prof.name} ! Tu peux admirer tes vignettes collector et imprimer ton diplôme officiel.`);
+        }
+
+        function closeTrophiesModal() {
+            document.getElementById('modal-trophies').classList.add('hidden');
+        }
+
+        function openDiplomaPrintModal() {
+            const prof = getActiveProfile();
+            const levels = getLevelsList();
+            const totalStars = levels.reduce((acc, l) => acc + getLevelTotalStars(l.id), 0);
+            setTextSafe('diploma-student-name', `${prof.avatar} ${prof.name}`);
+            setTextSafe('diploma-stars', `${totalStars} ⭐`);
+            setTextSafe('diploma-stickers', `${(prof.unlockedStickers || []).length} / ${levels.length}`);
+            setTextSafe('diploma-sprint', `${prof.sprintBest || 0} mots`);
+            setTextSafe('diploma-date', `Délivré le ${new Date().toLocaleDateString('fr-FR')}`);
+            closeTrophiesModal();
+            document.getElementById('modal-diploma').classList.remove('hidden');
+            speakFrench(`Félicitations ${prof.name} ! Voici ton diplôme officiel Clavier Magique prêt à être imprimé !`);
+        }
+
+        function closeDiplomaPrintModal() {
+            document.getElementById('modal-diploma').classList.add('hidden');
+        }
+
+        function openTeacherModal() {
+            const prof = getActiveProfile();
+            document.getElementById('teacher-title-input').value = prof.customTeacher.title || "Atelier de l'Enseignant";
+            document.getElementById('teacher-words-input').value = prof.customTeacher.text || "ecole livre crayon cahier tableau eleve";
+            document.getElementById('modal-teacher').classList.remove('hidden');
+        }
+
+        function closeTeacherModal() {
+            document.getElementById('modal-teacher').classList.add('hidden');
+        }
+
+        function saveTeacherCustomExercise() {
+            const prof = getActiveProfile();
+            prof.customTeacher = {
+                title: (document.getElementById('teacher-title-input').value || '').trim() || "Atelier de l'Enseignant",
+                text: (document.getElementById('teacher-words-input').value || '').trim() || "ecole livre crayon"
+            };
+            saveProgress();
+            closeTeacherModal();
+            renderMap();
+            startLevel(9, 0);
+        }
+
+        function openDeveloperContactModal() {
+            document.getElementById('dev-contact-subject').value = 'Demande';
+            document.getElementById('dev-contact-body').value = '';
+            document.getElementById('dev-contact-feedback').classList.add('hidden');
+            document.getElementById('modal-dev-contact').classList.remove('hidden');
+        }
+
+        function closeDeveloperContactModal() {
+            document.getElementById('modal-dev-contact').classList.add('hidden');
+        }
+
+        function sendDeveloperContactForm() {
+            const subj = (document.getElementById('dev-contact-subject').value || 'Demande').trim();
+            const msg = (document.getElementById('dev-contact-body').value || '').trim();
+            const fb = document.getElementById('dev-contact-feedback');
+            if (!msg) {
+                fb.textContent = '⚠️ Merci de saisir un message avant d’envoyer.';
+                fb.className = 'text-xs font-bold p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200';
+                fb.classList.remove('hidden');
+                return;
+            }
+            const recipient = [119,97,100,101,50,48,50,48,119,105,108,115,111,110,64,103,109,97,105,108,46,99,111,109].map(c => String.fromCharCode(c)).join('');
+            fb.textContent = '✅ Ouverture de votre messagerie pour envoyer la demande...';
+            fb.className = 'text-xs font-bold p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200';
+            fb.classList.remove('hidden');
+            window.location.href = `mailto:${recipient}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(msg)}`;
+            setTimeout(() => closeDeveloperContactModal(), 1500);
+        }
+
+        function openHelpModal() {
+            document.getElementById('modal-help').classList.remove('hidden');
+            const prof = getActiveProfile();
+            speakFrench(`Bienvenue dans le guide d'aide ${prof.name} ! Survole n'importe quel bouton avec la souris pour écouter et lire son explication.`);
+        }
+
+        function closeHelpModal() {
+            document.getElementById('modal-help').classList.add('hidden');
+        }
+
+        function toggleTooltipsEnabled() {
+            appState.tooltipsEnabled = !appState.tooltipsEnabled;
+            setTextSafe('btn-toggle-tooltips', appState.tooltipsEnabled ? '✅ Activées' : '❌ Désactivées');
+            saveProgress();
+        }
+
+        function openChangelogModal() {
+            const listEl = document.getElementById('changelog-list');
+            if (listEl) {
+                listEl.innerHTML = APP_CHANGELOG.map((rel, idx) => `
+                    <div class="p-3.5 rounded-2xl border-2 ${idx === 0 ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200'}">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="font-black text-xs px-2.5 py-0.5 rounded-lg ${idx === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-white'}">${rel.version}</span>
+                            <span class="text-xs font-bold text-slate-400">${rel.date}</span>
+                        </div>
+                        <ul class="list-disc pl-5 space-y-1 text-xs text-slate-700">
+                            ${rel.items.map(it => `<li>${it}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('modal-changelog').classList.remove('hidden');
+        }
+
+        function closeChangelogModal() {
+            document.getElementById('modal-changelog').classList.add('hidden');
+        }
+
+        /* =========================================================================
+           RENDU DE LA CARTE DES MONDES & CINÉMATIQUES
+           ========================================================================= */
+        let activeScreen = 'map';
+        let cinemaMode = 'intro';
+        let cinemaLevelId = 1;
+        let cinemaAnimId = null;
+
+        function showScreen(screen) {
+            activeScreen = screen;
+            ['map', 'practice', 'arcade', 'challenges'].forEach(s => {
+                const el = document.getElementById(`screen-${s}`);
+                if (el) el.classList.add('hidden');
+            });
+            document.getElementById(`screen-${screen}`).classList.remove('hidden');
+            if (screen !== 'arcade') stopArcadeLoop();
+            if (screen !== 'challenges') stopChallengeLoop();
+            if (screen !== 'practice') activeTrialCanvasLoop = false;
+            if (screen === 'map') renderMap();
+        }
+
+        function renderMap() {
+            const prof = getActiveProfile();
+            const levels = getLevelsList();
+            let totalStars = 0, badges = 0, crowns = 0, diplomas = 0;
+
+            levels.forEach(lvl => {
+                const t = getLevelTrials(lvl.id);
+                totalStars += (t[0] || 0) + (t[1] || 0) + (t[2] || 0);
+                const maxS = Math.max(...t);
+                if (maxS >= 1) badges++;
+                if (maxS >= 2) crowns++;
+                if (maxS >= 3) diplomas++;
+            });
+
+            setTextSafe('total-stars-display', `${totalStars} / ${levels.length * 9}`);
+            setTextSafe('count-stickers', `${(prof.unlockedStickers || []).length} / ${levels.length}`);
+            setTextSafe('count-avatars', `${(prof.unlockedAvatars || BASE_AVATARS).length}`);
+            setTextSafe('count-badges', `${badges}`);
+            setTextSafe('count-crowns', `${crowns}`);
+            setTextSafe('count-diplomas', `${diplomas}`);
+
+            const renderCard = (lvl, idx) => {
+                const prev = levels[idx - 1];
+                const unlocked = appState.adminMode || lvl.alwaysUnlocked || idx === 0 || (prev && isLevelSeriesCompleted(prev.id));
+                const t = getLevelTrials(lvl.id);
+                const done = isLevelSeriesCompleted(lvl.id);
+
+                return `
+                    <div class="level-card bg-white rounded-3xl p-4 border-4 ${unlocked ? lvl.border : 'border-slate-200 opacity-75'} shadow-md flex flex-col justify-between relative overflow-hidden">
+                        ${lvl.isBonus ? `<span class="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-bl-xl">${lvl.bonusTag}</span>` : ''}
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2.5 ${lvl.isBonus ? 'mt-2' : ''}">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${unlocked ? lvl.color : 'from-slate-300 to-slate-400'} flex items-center justify-center text-2xl text-white shadow-sm shrink-0">
+                                    ${unlocked ? lvl.icon : '🔒'}
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${done ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                                        ${done ? '✅ Terminé' : `${getLevelTotalStars(lvl.id)} / 9 ⭐`}
+                                    </span>
+                                    <div class="text-[11px] font-bold text-slate-400 mt-1">Cadeaux : ${lvl.rewardAvatar} + ${lvl.rewardSticker.icon}</div>
+                                </div>
+                            </div>
+                            <div class="text-[11px] font-extrabold text-indigo-600 uppercase">${lvl.world}</div>
+                            <h4 class="text-base font-extrabold text-slate-800 mb-2.5 leading-snug">${lvl.title}</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-3 gap-1">
+                                ${lvl.trials.map((tr, tIdx) => {
+                                    const tUnl = unlocked && (appState.adminMode || tIdx === 0 || t[tIdx - 1] >= 1);
+                                    return `
+                                        <button type="button" ${tUnl ? `onclick="startLevel(${lvl.id}, ${tIdx})"` : 'disabled'}
+                                            class="p-1.5 rounded-xl border text-center transition ${tUnl ? 'bg-slate-50 hover:bg-amber-50 border-slate-200 cursor-pointer' : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'}">
+                                            <div class="text-[10px] font-extrabold truncate">${tUnl ? tr.name : '🔒'}</div>
+                                            <div class="text-[10px]">${t[tIdx] > 0 ? '⭐'.repeat(t[tIdx]) : '☆☆☆'}</div>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <div class="flex gap-1.5">
+                                <button type="button" ${unlocked ? `onclick="openWorldIntro(${lvl.id})"` : 'disabled'}
+                                    class="flex-1 py-2 px-3 rounded-2xl font-extrabold text-xs sm:text-sm transition ${unlocked ? `bg-gradient-to-r ${lvl.color} text-white shadow-sm hover:opacity-95` : 'bg-slate-200 text-slate-400 cursor-not-allowed'}">
+                                    ${unlocked ? 'Jouer ce monde ▶' : 'Verrouillé 🔒'}
+                                </button>
+                                ${lvl.isCustomTeacher ? `<button type="button" onclick="openTeacherModal()" class="p-2 rounded-2xl bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold border border-indigo-300">✏️</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const main = levels.map((lvl, idx) => ({ lvl, idx })).filter(x => !x.lvl.isBonus);
+            const bonus = levels.map((lvl, idx) => ({ lvl, idx })).filter(x => x.lvl.isBonus);
+            document.getElementById('levels-grid').innerHTML = main.map(x => renderCard(x.lvl, x.idx)).join('');
+            document.getElementById('bonus-levels-grid').innerHTML = bonus.map(x => renderCard(x.lvl, x.idx)).join('');
+        }
+
+        function openWorldIntro(levelId) {
+            const lvl = getLevelsList().find(l => l.id === levelId) || getLevelsList()[0];
+            const prof = getActiveProfile();
+            cinemaMode = 'intro'; cinemaLevelId = lvl.id;
+            setTextSafe('cinema-badge', lvl.isBonus ? lvl.bonusTag : `🎬 MONDE ${lvl.id} • INTRODUCTION`);
+            setTextSafe('cinema-title', `${lvl.icon} ${lvl.title}`);
+            const storyText = `Courage ${prof.name} ! Léo le Renard t'accompagne dans « ${lvl.title} ». Réussis les 3 épreuves pour débloquer l'avatar ${lvl.rewardAvatar} et la vignette ${lvl.rewardSticker.name} !`;
+            setTextSafe('cinema-story', storyText);
+            document.getElementById('cinema-rewards-box').classList.add('hidden');
+            document.getElementById('cinema-secondary-btn').classList.add('hidden');
+            setTextSafe('cinema-primary-btn', "🚀 Commencer l'Épreuve 1 !");
+            document.getElementById('modal-cinema').classList.remove('hidden');
+            startCinemaCanvas(lvl, prof, 'intro');
+            replayCinemaMusic();
+            speakFrench(`Courage ${prof.name} ! Bienvenue dans le monde ${lvl.title}. Réussis les 3 épreuves pour débloquer de nouveaux cadeaux !`);
+        }
+
+        function openWorldConclusion(levelId) {
+            const lvl = getLevelsList().find(l => l.id === levelId) || getLevelsList()[0];
+            const prof = getActiveProfile();
+            cinemaMode = 'outro'; cinemaLevelId = lvl.id;
+            setTextSafe('cinema-badge', `🏆 MONDE ${lvl.id} TERMINÉ À 100% !`);
+            setTextSafe('cinema-title', `Félicitations ${prof.name} !`);
+            setTextSafe('cinema-story', `Extraordinaire ! Tu as triomphé des 3 épreuves de « ${lvl.title} » !`);
+            document.getElementById('cinema-rewards-box').classList.remove('hidden');
+            setTextSafe('cinema-rewards-icons', `${lvl.rewardAvatar} ${lvl.rewardSticker.icon}`);
+            setTextSafe('cinema-rewards-label', `Débloqués : Avatar ${lvl.rewardAvatar} & Vignette « ${lvl.rewardSticker.name} » !`);
+            document.getElementById('cinema-secondary-btn').classList.remove('hidden');
+            setTextSafe('cinema-primary-btn', "➡️ Monde Suivant !");
+            document.getElementById('modal-cinema').classList.remove('hidden');
+            startCinemaCanvas(lvl, prof, 'outro');
+            playMelody(['C5', 'E5', 'G5', 'B5', 'C6'], 130);
+            speakFrench(`Félicitations ${prof.name} ! Tu as terminé le monde ${lvl.title} à cent pour cent et débloqué ta vignette collector ${lvl.rewardSticker.name} !`);
+        }
+
+        function replayCinemaMusic() {
+            playMelody(['C4', 'E4', 'G4', 'C5', 'G4', 'C5'], 135);
+        }
+
+        function closeCinemaAndGoMap() {
+            if (cinemaAnimId) cancelAnimationFrame(cinemaAnimId);
+            document.getElementById('modal-cinema').classList.add('hidden');
+            showScreen('map');
+        }
+
+        function confirmCinemaAction() {
+            if (cinemaAnimId) cancelAnimationFrame(cinemaAnimId);
+            document.getElementById('modal-cinema').classList.add('hidden');
+            const levels = getLevelsList();
+            if (cinemaMode === 'intro') {
+                startLevel(cinemaLevelId, 0);
+            } else {
+                const nextIdx = (levels.findIndex(l => l.id === cinemaLevelId) + 1) % levels.length;
+                openWorldIntro(levels[nextIdx].id);
+            }
+        }
+
+        function startCinemaCanvas(lvl, prof, mode) {
+            if (cinemaAnimId) cancelAnimationFrame(cinemaAnimId);
+            const start = performance.now();
+            function loop(now) {
+                const canvas = document.getElementById('cinema-canvas');
+                if (!canvas || document.getElementById('modal-cinema').classList.contains('hidden')) return;
+                const rect = canvas.getBoundingClientRect();
+                if (rect.width > 0) { canvas.width = rect.width; canvas.height = rect.height; }
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width, h = canvas.height, t = (now - start) / 1000;
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, '#1e1b4b'); grad.addColorStop(1, '#0284c7');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.font = '56px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                const bounce = Math.sin(t * 4) * 10;
+                ctx.fillText(prof.avatar, w * 0.35, h * 0.52 + bounce);
+                ctx.fillText(mode === 'outro' ? lvl.rewardSticker.icon : lvl.icon, w * 0.65, h * 0.52 - bounce);
+                cinemaAnimId = requestAnimationFrame(loop);
+            }
+            cinemaAnimId = requestAnimationFrame(loop);
+        }
+
+        /* =========================================================================
+           ENTRAÎNEMENT CLAVIER AZERTY & MINI-JEUX
+           ========================================================================= */
+        let activeTrialCanvasLoop = false;
+
+        function startLevel(levelId, trialIdx = 0) {
+            const lvl = getLevelsList().find(l => l.id === levelId) || getLevelsList()[0];
+            appState.currentLevelId = lvl.id;
+            appState.currentTrialIndex = trialIdx;
+            appState.targetText = lvl.trials[trialIdx].text;
+            appState.currentIndex = 0;
+            appState.errors = 0;
+            appState.totalKeystrokes = 0;
+            appState.startTime = null;
+
+            setTextSafe('lesson-badge', `${lvl.world} • Épreuve ${trialIdx + 1}/3`);
+            setTextSafe('lesson-title', `${lvl.trials[trialIdx].name} — ${lvl.title}`);
+            setTextSafe('leo-hint-text', lvl.tip);
+            setTextSafe('live-wpm', '0 MPM');
+            setTextSafe('live-acc', '100%');
+            document.getElementById('lesson-progress-bar').style.width = '0%';
+
+            const stage = document.getElementById('trial-minigame-stage');
+            if (trialIdx > 0) {
+                stage.classList.remove('hidden');
+                setTextSafe('trial-stage-banner', `${lvl.icon} ${lvl.trials[trialIdx].name} : Fais progresser ton héros !`);
+                startTrialCanvasLoop();
+            } else {
+                stage.classList.add('hidden');
+                activeTrialCanvasLoop = false;
+            }
+
+            const tArr = getLevelTrials(lvl.id);
+            lvl.trials.forEach((tr, i) => {
+                const btn = document.getElementById(`tab-trial-${i}`);
+                if (!btn) return;
+                const unl = appState.adminMode || i === 0 || tArr[i - 1] >= 1;
+                btn.textContent = `${tr.name} ${tArr[i] > 0 ? '⭐' : (!unl ? '🔒' : '')}`;
+                btn.className = i === trialIdx
+                    ? 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-950 shadow-sm'
+                    : (unl ? 'px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-700' : 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 opacity-60');
+            });
+
+            renderVirtualKeyboard();
+            renderTargetText();
+            showScreen('practice');
+        }
+
+        function switchTrial(idx) {
+            const tArr = getLevelTrials(appState.currentLevelId);
+            if (!appState.adminMode && idx > 0 && tArr[idx - 1] < 1) return;
+            startLevel(appState.currentLevelId, idx);
+        }
+
+        function toggleBlindKeyboard() {
+            appState.blindKeyboard = !appState.blindKeyboard;
+            renderVirtualKeyboard();
+            renderTargetText();
+        }
+
+        function getFingerForChar(ch) {
+            if (ch === ' ') return 'thumb';
+            if (/[A-Z]/.test(ch)) return 'shift';
+            const low = ch.toLowerCase();
+            if ('éèçàêâîôû'.includes(low)) return 'pinky-r';
+            for (const row of AZERTY_ROWS) {
+                for (const item of row) {
+                    if (item.key === low || item.alt === low) return item.finger;
+                }
+            }
+            return 'index-r';
+        }
+
+        function renderVirtualKeyboard() {
+            const kb = document.getElementById('virtual-keyboard');
+            kb.innerHTML = AZERTY_ROWS.map(row => `
+                <div class="flex justify-center gap-1 sm:gap-1.5">
+                    ${row.map(item => {
+                        const f = FINGER_INFO[item.finger];
+                        const wCls = item.wide ? 'w-52 sm:w-72 h-8 sm:h-9' : (item.shiftKey ? 'w-14 sm:w-20 h-8 sm:h-9' : 'w-7 sm:w-10 h-8 sm:h-9');
+                        const lbl = (appState.blindKeyboard && !item.wide && !item.shiftKey) ? '•' : (item.label || item.key.toUpperCase());
+                        const domKey = item.key === ' ' ? 'SPACE' : (item.shiftKey ? 'SHIFT' : item.key);
+                        return `<div id="vkey-${domKey}" class="${wCls} ${f.colorClass} rounded-xl border-b-4 flex flex-col items-center justify-center font-bold text-xs sm:text-sm">${!appState.blindKeyboard && item.alt ? `<span class="text-[8px] leading-none">${item.alt}</span>` : ''}<span>${lbl}</span></div>`;
+                    }).join('')}
+                </div>
+            `).join('');
+        }
+
+        function renderTargetText() {
+            const container = document.getElementById('target-text-container');
+            const lvl = getLevelsList().find(l => l.id === appState.currentLevelId) || getLevelsList()[0];
+            const preserveCase = !!lvl.requiresCase;
+            const chars = appState.targetText.split('');
+
+            // Regrouper chaque mot dans un conteneur insécable pour ne jamais couper un mot en fin de ligne
+            const wordsHtml = [];
+            let currentWordSpans = [];
+
+            chars.forEach((ch, idx) => {
+                const disp = ch === ' ' ? '␣' : (preserveCase ? ch : ch.toUpperCase());
+                let spanHtml = '';
+                if (idx < appState.currentIndex) {
+                    spanHtml = `<span class="text-emerald-500">${disp}</span>`;
+                } else if (idx === appState.currentIndex) {
+                    spanHtml = `<span class="current-char bg-amber-100 text-slate-900 px-1 rounded-lg">${disp}</span>`;
+                } else {
+                    spanHtml = `<span class="text-slate-400">${disp}</span>`;
+                }
+
+                if (ch === ' ') {
+                    if (currentWordSpans.length > 0) {
+                        wordsHtml.push(`<span class="inline-flex items-center whitespace-nowrap gap-x-1.5">${currentWordSpans.join('')}</span>`);
+                        currentWordSpans = [];
+                    }
+                    wordsHtml.push(`<span class="inline-flex items-center">${spanHtml}</span>`);
+                } else {
+                    currentWordSpans.push(spanHtml);
+                }
+            });
+
+            if (currentWordSpans.length > 0) {
+                wordsHtml.push(`<span class="inline-flex items-center whitespace-nowrap gap-x-1.5">${currentWordSpans.join('')}</span>`);
+            }
+
+            container.innerHTML = wordsHtml.join('');
+
+            document.querySelectorAll('.key-target').forEach(el => el.classList.remove('key-target'));
+            const nextChar = chars[appState.currentIndex];
+            if (nextChar !== undefined) {
+                const accentMap = { 'é': '2', 'è': '7', 'ç': '9', 'à': '0' };
+                const circumMap = { 'ê': 'e', 'â': 'a', 'î': 'i', 'ô': 'o', 'û': 'u' };
+                const low = nextChar.toLowerCase();
+                const base = accentMap[low] || circumMap[low] || low;
+                const el = document.getElementById(nextChar === ' ' ? 'vkey-SPACE' : `vkey-${base}`);
+                if (el) el.classList.add('key-target');
+                if (circumMap[low]) {
+                    const hat = document.getElementById('vkey-^');
+                    if (hat) hat.classList.add('key-target');
+                }
+                if (preserveCase && /[A-Z]/.test(nextChar)) {
+                    const sh = document.getElementById('vkey-SHIFT');
+                    if (sh) sh.classList.add('key-target');
+                }
+                const fInfo = FINGER_INFO[getFingerForChar(preserveCase ? nextChar : low)];
+                setTextSafe('finger-instruction', fInfo.name);
+            }
+            document.getElementById('lesson-progress-bar').style.width = `${Math.round((appState.currentIndex / chars.length) * 100)}%`;
+        }
+
+        function startTrialCanvasLoop() {
+            if (activeTrialCanvasLoop) return;
+            activeTrialCanvasLoop = true;
+            function draw() {
+                if (!activeTrialCanvasLoop) return;
+                const canvas = document.getElementById('trial-canvas');
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                if (rect.width > 0) { canvas.width = rect.width; canvas.height = rect.height; }
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width, h = canvas.height;
+                const lvl = getLevelsList().find(l => l.id === appState.currentLevelId) || getLevelsList()[0];
+                const prog = appState.currentIndex / Math.max(1, appState.targetText.length);
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, '#0284c7'); grad.addColorStop(1, '#10b981');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(20, h - 18, w - 40, 8);
+                ctx.fillStyle = '#facc15'; ctx.fillRect(20, h - 18, (w - 40) * prog, 8);
+                ctx.font = '44px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                const hx = 45 + prog * (w - 110);
+                ctx.fillText(lvl.icon, hx, h * 0.48 + Math.sin(performance.now() / 180) * 6);
+                ctx.fillText(lvl.rewardSticker.icon, w - 45, h * 0.48);
+                requestAnimationFrame(draw);
+            }
+            requestAnimationFrame(draw);
+        }
+
+        function handlePracticeKeystroke(keyPressed) {
+            if (appState.currentIndex >= appState.targetText.length) return;
+            if (!appState.startTime) appState.startTime = Date.now();
+            const lvl = getLevelsList().find(l => l.id === appState.currentLevelId) || getLevelsList()[0];
+            const preserveCase = !!lvl.requiresCase;
+            const expected = appState.targetText[appState.currentIndex];
+            appState.totalKeystrokes++;
+
+            const match = preserveCase ? (keyPressed === expected) : (keyPressed.toLowerCase() === expected.toLowerCase());
+            if (match) {
+                playSound('key');
+                appState.currentIndex++;
+                renderTargetText();
+                const mins = Math.max((Date.now() - appState.startTime) / 60000, 0.05);
+                setTextSafe('live-wpm', `${Math.min(160, Math.round((appState.currentIndex / 5) / mins))} MPM`);
+                setTextSafe('live-acc', `${Math.max(0, Math.round(((appState.totalKeystrokes - appState.errors) / appState.totalKeystrokes) * 100))}%`);
+                if (appState.currentIndex >= appState.targetText.length) finishLesson();
+            } else {
+                playSound('error');
+                appState.errors++;
+                const prof = getActiveProfile();
+                if (!prof.errorCounts) prof.errorCounts = {};
+                const k = expected.toLowerCase();
+                prof.errorCounts[k] = (prof.errorCounts[k] || 0) + 1;
+                const box = document.getElementById('typing-box');
+                box.classList.remove('shake-error'); void box.offsetWidth; box.classList.add('shake-error');
+            }
+        }
+
+        function finishLesson() {
+            playSound('win');
+            const prof = getActiveProfile();
+            const lvl = getLevelsList().find(l => l.id === appState.currentLevelId) || getLevelsList()[0];
+            const mins = Math.max((Date.now() - (appState.startTime || Date.now() - 3000)) / 60000, 0.05);
+            const wpm = Math.min(160, Math.round((appState.targetText.length / 5) / mins));
+            const len = Math.max(1, appState.targetText.length);
+            const acc = appState.errors === 0 ? 100 : Math.max(0, Math.round(((len - Math.min(len, appState.errors)) / len) * 100));
+            const stars = (appState.errors <= 2 || acc >= 90) ? 3 : ((appState.errors <= 5 || acc >= 75) ? 2 : 1);
+
+            const tArr = getLevelTrials(lvl.id);
+            if (stars > (tArr[appState.currentTrialIndex] || 0)) tArr[appState.currentTrialIndex] = stars;
+
+            const isSeriesComplete = isLevelSeriesCompleted(lvl.id);
+            if (isSeriesComplete) {
+                if (!prof.unlockedAvatars.includes(lvl.rewardAvatar)) prof.unlockedAvatars.push(lvl.rewardAvatar);
+                if (!prof.unlockedStickers.includes(lvl.id)) prof.unlockedStickers.push(lvl.id);
+            }
+            saveProgress();
+
+            setTextSafe('victory-title', `Bravo ${prof.name} !`);
+            setTextSafe('victory-subtitle', isSeriesComplete ? `Tu as terminé tout le monde « ${lvl.title} » !` : `Épreuve ${appState.currentTrialIndex + 1}/3 réussie !`);
+            document.getElementById('victory-stars').innerHTML = [1, 2, 3].map(n => n <= stars ? '<span>⭐</span>' : '<span class="opacity-25">⭐</span>').join('');
+            setTextSafe('victory-reward-icon', isSeriesComplete ? `${lvl.rewardAvatar}${lvl.rewardSticker.icon}` : lvl.icon);
+            setTextSafe('victory-reward-name', isSeriesComplete ? `${lvl.rewardSticker.name}` : `Prochaine épreuve débloquée !`);
+            setTextSafe('victory-wpm', `${wpm} MPM`);
+            setTextSafe('victory-acc', `${acc}%`);
+            setTextSafe('btn-next-level', appState.currentTrialIndex < 2 ? "Épreuve Suivante ➡️" : "Monde Suivant ➡️");
+            document.getElementById('modal-victory').classList.remove('hidden');
+
+            const vocalBravo = isSeriesComplete
+                ? `Bravo ${prof.name} ! Tu as gagné ${stars} étoile${stars > 1 ? 's' : ''} et terminé tout le monde ${lvl.title} ! Tu as débloqué un nouvel avatar et ta vignette ${lvl.rewardSticker.name} !`
+                : `Super ${prof.name} ! Tu as gagné ${stars} étoile${stars > 1 ? 's' : ''} sur l'épreuve ${lvl.trials[appState.currentTrialIndex].name} ! Continue comme ça !`;
+            speakFrench(vocalBravo);
+        }
+
+        function requestVictoryAction(action) {
+            if (appState.currentTrialIndex === 2) {
+                appState.pendingVictoryAction = action;
+                const prof = getActiveProfile();
+                const levels = getLevelsList();
+                const lvl = levels.find(l => l.id === appState.currentLevelId) || levels[0];
+                const nextLvl = levels[(levels.findIndex(l => l.id === lvl.id) + 1) % levels.length];
+                if (action === 'retry') {
+                    setTextSafe('series-confirm-icon', '🔄🦊');
+                    setTextSafe('series-confirm-title', 'Refaire ce monde ?');
+                    setTextSafe('series-confirm-text', `Veux-tu recommencer depuis la 1ère épreuve du monde « ${lvl.title} » ?`);
+                    setTextSafe('series-confirm-ok-btn', 'Oui, refaire le monde !');
+                    speakFrench(`${prof.name}, veux-tu recommencer le monde ${lvl.title} depuis la première épreuve ?`);
+                } else {
+                    setTextSafe('series-confirm-icon', `${nextLvl.icon}🚀`);
+                    setTextSafe('series-confirm-title', 'Partir vers un nouveau monde ?');
+                    setTextSafe('series-confirm-text', `Tu as fini « ${lvl.title} » ! Veux-tu voyager maintenant vers « ${nextLvl.title} » ?`);
+                    setTextSafe('series-confirm-ok-btn', 'Oui, nouveau monde !');
+                    speakFrench(`Bravo ${prof.name} ! Tu as fini ${lvl.title}. Veux-tu voyager maintenant vers ${nextLvl.title} ?`);
+                }
+                document.getElementById('modal-series-confirm').classList.remove('hidden');
+                return;
+            }
+            if (action === 'retry') {
+                document.getElementById('modal-victory').classList.add('hidden');
+                startLevel(appState.currentLevelId, appState.currentTrialIndex);
+            } else {
+                nextLevel();
+            }
+        }
+
+        function closeSeriesConfirmModal() {
+            appState.pendingVictoryAction = null;
+            document.getElementById('modal-series-confirm').classList.add('hidden');
+        }
+
+        function executeConfirmedVictoryAction() {
+            const act = appState.pendingVictoryAction;
+            closeSeriesConfirmModal();
+            document.getElementById('modal-victory').classList.add('hidden');
+            if (act === 'retry') {
+                startLevel(appState.currentLevelId, 0);
+            } else {
+                openWorldConclusion(appState.currentLevelId);
+            }
+        }
+
+        function nextLevel() {
+            document.getElementById('modal-victory').classList.add('hidden');
+            if (appState.currentTrialIndex < 2) {
+                startLevel(appState.currentLevelId, appState.currentTrialIndex + 1);
+            } else {
+                openWorldConclusion(appState.currentLevelId);
+            }
+        }
+
+        /* =========================================================================
+           ARCADE SPATIALE & DÉFIS CHRONO / ROBOT
+           ========================================================================= */
+        let arcadeAnimId = null, arcadeTimerInterval = null;
+        let arcadeState = { running: false, difficulty: 'easy', score: 0, lives: 5, timeLeft: 60, asteroids: [], shipX: 0.5, lastSpawn: 0 };
+
+        function setArcadeDifficulty(diff) {
+            arcadeState.difficulty = diff;
+            ['easy', 'medium', 'hard'].forEach(d => {
+                const btn = document.getElementById(`arcade-diff-${d}`);
+                if (btn) btn.className = d === diff ? 'px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 transition' : 'px-3.5 py-1.5 rounded-xl text-slate-300';
+            });
+        }
+
+        function stopArcadeLoop() {
+            arcadeState.running = false;
+            if (arcadeAnimId) cancelAnimationFrame(arcadeAnimId);
+            if (arcadeTimerInterval) clearInterval(arcadeTimerInterval);
+        }
+
+        function stopArcadeAndReturn() {
+            stopArcadeLoop();
+            showScreen('map');
+        }
+
+        function startArcadeGame() {
+            stopArcadeLoop();
+            arcadeState = { ...arcadeState, running: true, score: 0, lives: 5, timeLeft: 60, asteroids: [], shipX: 0.5, lastSpawn: 0 };
+            setTextSafe('arcade-score', '0');
+            setTextSafe('arcade-timer', '60s');
+            setTextSafe('arcade-lives', '❤️❤️❤️❤️❤️');
+            document.getElementById('arcade-overlay').classList.add('hidden');
+
+            arcadeTimerInterval = setInterval(() => {
+                if (!arcadeState.running) return;
+                arcadeState.timeLeft--;
+                setTextSafe('arcade-timer', `${arcadeState.timeLeft}s`);
+                if (arcadeState.timeLeft <= 0) endArcadeGame('Temps écoulé !');
+            }, 1000);
+
+            function loop(now) {
+                if (!arcadeState.running) return;
+                const canvas = document.getElementById('arcade-canvas');
+                const rect = canvas.getBoundingClientRect();
+                if (rect.width > 0) { canvas.width = rect.width; canvas.height = rect.height; }
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width, h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const cfg = { easy: { ms: 2600, spd: 0.45 }, medium: { ms: 2000, spd: 0.65 }, hard: { ms: 1350, spd: 0.95 } }[arcadeState.difficulty] || { ms: 2600, spd: 0.45 };
+                if (now - arcadeState.lastSpawn > cfg.ms) {
+                    arcadeState.lastSpawn = now;
+                    const letters = 'abcdefghijklmnopqrstuvwxyz';
+                    arcadeState.asteroids.push({ char: letters[Math.floor(Math.random() * letters.length)], x: 0.1 + Math.random() * 0.8, y: -20, spd: cfg.spd });
+                }
+
+                for (let i = arcadeState.asteroids.length - 1; i >= 0; i--) {
+                    const a = arcadeState.asteroids[i];
+                    a.y += a.spd;
+                    ctx.beginPath(); ctx.arc(a.x * w, a.y, 24, 0, Math.PI * 2);
+                    ctx.fillStyle = '#312e81'; ctx.fill(); ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3; ctx.stroke();
+                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(a.char.toUpperCase(), a.x * w, a.y);
+                    if (a.y >= h - 30) {
+                        arcadeState.asteroids.splice(i, 1);
+                        arcadeState.lives--;
+                        playSound('boom');
+                        setTextSafe('arcade-lives', '❤️'.repeat(Math.max(0, arcadeState.lives)) || '💔');
+                        if (arcadeState.lives <= 0) { endArcadeGame('Bouclier percé !'); return; }
+                    }
+                }
+                ctx.font = '40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🚀', arcadeState.shipX * w, h - 34);
+                arcadeAnimId = requestAnimationFrame(loop);
+            }
+            arcadeAnimId = requestAnimationFrame(loop);
+        }
+
+        function handleArcadeKeystroke(key) {
+            const idx = arcadeState.asteroids.findIndex(a => a.char === key.toLowerCase());
+            if (idx !== -1) {
+                arcadeState.shipX = arcadeState.asteroids[idx].x;
+                arcadeState.asteroids.splice(idx, 1);
+                arcadeState.score += 10;
+                setTextSafe('arcade-score', `${arcadeState.score}`);
+                playSound('key');
+            } else {
+                playSound('error');
+            }
+        }
+
+        function endArcadeGame(reason) {
+            stopArcadeLoop();
+            const prof = getActiveProfile();
+            if (arcadeState.score > (prof.arcadeBest || 0)) { prof.arcadeBest = arcadeState.score; saveProgress(); }
+            setTextSafe('arcade-overlay-title', reason);
+            setTextSafe('arcade-overlay-desc', `Score final : ${arcadeState.score} points • Record personnel : ${prof.arcadeBest} pts !`);
+            document.getElementById('arcade-overlay').classList.remove('hidden');
+            speakFrench(`${reason} Bravo ${prof.name}, tu as marqué ${arcadeState.score} points dans la mission spatiale !`);
+        }
+
+        let challengeTimer = null;
+        let refereeCountdownTimer = null;
+        let challengeState = { mode: null, running: false, waitingReferee: false, sprintDiff: 'easy', robotDiff: 'easy', timeLeft: 30, wordsDone: 0, targetWord: '', charIdx: 0, robotProgress: 0 };
+
+        function setSprintDifficulty(diff) {
+            challengeState.sprintDiff = diff;
+            ['easy', 'medium', 'hard'].forEach(d => {
+                const btn = document.getElementById(`sprint-diff-${d}`);
+                if (btn) btn.className = d === diff ? 'flex-1 py-1 rounded-lg bg-amber-500 text-white' : 'flex-1 py-1 rounded-lg text-slate-600';
+            });
+        }
+
+        function setRobotDifficulty(diff) {
+            challengeState.robotDiff = diff;
+            ['easy', 'medium', 'hard'].forEach(d => {
+                const btn = document.getElementById(`robot-diff-${d}`);
+                if (btn) btn.className = d === diff ? 'flex-1 py-1 rounded-lg bg-sky-500 text-white' : 'flex-1 py-1 rounded-lg text-slate-600';
+            });
+        }
+
+        function stopChallengeLoop() {
+            challengeState.running = false;
+            challengeState.waitingReferee = false;
+            if (challengeTimer) clearInterval(challengeTimer);
+            if (refereeCountdownTimer) clearInterval(refereeCountdownTimer);
+        }
+
+        function stopChallengesAndReturn() {
+            stopChallengeLoop();
+            showScreen('map');
+        }
+
+        function renderChallengeTarget() {
+            const c = document.getElementById('challenge-target-display');
+            if (!c) return;
+
+            // Regrouper chaque mot dans un bloc insécable pour éviter toute coupure de mot
+            const wordsHtml = [];
+            let currentWordSpans = [];
+
+            challengeState.targetWord.split('').forEach((ch, idx) => {
+                const d = ch === ' ' ? '␣' : ch.toUpperCase();
+                let spanHtml = '';
+                if (idx < challengeState.charIdx) {
+                    spanHtml = `<span class="text-emerald-500">${d}</span>`;
+                } else if (idx === challengeState.charIdx) {
+                    spanHtml = `<span class="current-char bg-amber-200 px-1.5 rounded-lg">${d}</span>`;
+                } else {
+                    spanHtml = `<span class="text-slate-400">${d}</span>`;
+                }
+
+                if (ch === ' ') {
+                    if (currentWordSpans.length > 0) {
+                        wordsHtml.push(`<span class="inline-flex items-center whitespace-nowrap gap-x-2">${currentWordSpans.join('')}</span>`);
+                        currentWordSpans = [];
+                    }
+                    wordsHtml.push(`<span class="inline-flex items-center">${spanHtml}</span>`);
+                } else {
+                    currentWordSpans.push(spanHtml);
+                }
+            });
+
+            if (currentWordSpans.length > 0) {
+                wordsHtml.push(`<span class="inline-flex items-center whitespace-nowrap gap-x-2">${currentWordSpans.join('')}</span>`);
+            }
+
+            c.innerHTML = wordsHtml.join('');
+        }
+
+        function showRefereeReadyPanel(message) {
+            const prof = getActiveProfile();
+            const panel = document.getElementById('referee-start-panel');
+            const btn = document.getElementById('btn-referee-go');
+            if (panel) panel.classList.remove('hidden');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🚦 Donner le départ !';
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                btn.classList.add('ring-4', 'ring-amber-400', 'animate-pulse');
+            }
+            setTextSafe('referee-badge', '🦊 Arbitre : En attente du départ');
+            setTextSafe('referee-instruction', message);
+            const arena = document.getElementById('challenge-arena');
+            if (arena) arena.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            speakFrench(`Prépare-toi ${prof.name} ! Quand tu es prêt, clique sur le bouton vert qui clignote : Donner le départ !`);
+        }
+
+        function triggerRefereeStart() {
+            if (!challengeState.waitingReferee || refereeCountdownTimer) return;
+            const btn = document.getElementById('btn-referee-go');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.remove('ring-4', 'ring-amber-400', 'animate-pulse');
+                btn.classList.add('opacity-60', 'cursor-not-allowed');
+            }
+
+            const steps = [
+                { badge: '🚦 À vos marques... 3', msg: '⏳ Prépare tes doigts... 3', btnText: '🚦 3...', voice: 'À vos marques... 3', note: 'C5' },
+                { badge: '🚦 Prêts... 2', msg: '⏳ Attention... 2', btnText: '🚦 2...', voice: '2', note: 'D5' },
+                { badge: '🚦 Attention... 1', msg: '⏳ Presque... 1', btnText: '🚦 1...', voice: '1', note: 'E5' }
+            ];
+
+            let stepIdx = 0;
+
+            const runStep = () => {
+                if (!challengeState.waitingReferee) return;
+                if (stepIdx < steps.length) {
+                    const s = steps[stepIdx];
+                    setTextSafe('referee-badge', s.badge);
+                    setTextSafe('challenge-feedback', s.msg);
+                    if (btn) btn.textContent = s.btnText;
+                    playMelody([s.note], 80);
+                    speakFrench(s.voice);
+                    stepIdx++;
+                    refereeCountdownTimer = setTimeout(runStep, stepIdx === 1 ? 1500 : 1100);
+                } else {
+                    refereeCountdownTimer = null;
+                    challengeState.waitingReferee = false;
+                    challengeState.running = true;
+                    const panel = document.getElementById('referee-start-panel');
+                    if (panel) panel.classList.add('hidden');
+                    setTextSafe('referee-badge', '🟢 PARTEZ ! COURSE EN COURS !');
+                    setTextSafe('challenge-feedback', '⌨️ GO ! Tape vite les lettres affichées ci-dessus !');
+                    playMelody(['C5', 'G5', 'C6'], 90);
+                    speakFrench('Partez !');
+                    launchActiveChallengeTimer();
+                }
+            };
+
+            runStep();
+        }
+
+        function launchActiveChallengeTimer() {
+            if (challengeState.mode === 'sprint') {
+                challengeTimer = setInterval(() => {
+                    if (!challengeState.running) return;
+                    challengeState.timeLeft--;
+                    document.getElementById('challenge-player-runner').style.marginLeft = `${Math.min(90, challengeState.wordsDone * 6)}%`;
+                    setTextSafe('challenge-status-text', `${challengeState.timeLeft}s • ${challengeState.wordsDone} mot(s)`);
+                    if (challengeState.timeLeft <= 0) {
+                        stopChallengeLoop();
+                        const prof = getActiveProfile();
+                        if (challengeState.wordsDone > (prof.sprintBest || 0)) { prof.sprintBest = challengeState.wordsDone; saveProgress(); }
+                        setTextSafe('sprint-best-badge', `${prof.sprintBest} mots`);
+                        const medal = challengeState.wordsDone >= 12 ? '🚀 Fusée' : (challengeState.wordsDone >= 8 ? '🐆 Guépard' : (challengeState.wordsDone >= 4 ? '🐇 Lièvre' : '🐢 Tortue'));
+                        setTextSafe('referee-badge', '🏁 ARRIVÉE !');
+                        setTextSafe('challenge-feedback', `⏱️ Terminé ! Tu as réussi ${challengeState.wordsDone} mot(s) (${medal}) !`);
+                        playMelody(['C5', 'E5', 'G5', 'C6'], 130);
+                        speakFrench(`Temps écoulé ${prof.name} ! Tu as écrit ${challengeState.wordsDone} mot${challengeState.wordsDone > 1 ? 's' : ''} en trente secondes !`);
+                    }
+                }, 1000);
+            } else if (challengeState.mode === 'robot') {
+                const step = { easy: 0.35, medium: 0.58, hard: 0.85 }[challengeState.robotDiff] || 0.35;
+                challengeTimer = setInterval(() => {
+                    if (!challengeState.running) return;
+                    challengeState.robotProgress += step;
+                    document.getElementById('challenge-robot-runner').style.marginLeft = `${Math.min(90, challengeState.robotProgress)}%`;
+                    if (challengeState.robotProgress >= 90) {
+                        stopChallengeLoop();
+                        playSound('error');
+                        const prof = getActiveProfile();
+                        setTextSafe('referee-badge', '🤖 ARRIVÉE !');
+                        setTextSafe('challenge-status-text', '🤖 Le Robot a gagné !');
+                        document.getElementById('challenge-feedback').innerHTML = `Le Robot de Léo a franchi la ligne en premier ! Clique sur <strong>🤖 Préparer la Course</strong> pour prendre ta revanche !`;
+                        speakFrench(`Oh mince ${prof.name}, le robot est arrivé juste avant toi ! Clique sur préparer la course pour prendre ta revanche !`);
+                    }
+                }, 100);
+            }
+        }
+
+        function startSprintChallenge() {
+            stopChallengeLoop();
+            const wordsByDiff = {
+                easy: ['chat', 'lune', 'mer', 'lac', 'feu', 'ami', 'lion', 'bleu'],
+                medium: ['renard', 'soleil', 'etoile', 'nuage', 'robot', 'pirate'],
+                hard: ['clavier', 'dragon', 'chateau', 'victoire', 'champion', 'aventure']
+            };
+            const list = wordsByDiff[challengeState.sprintDiff] || wordsByDiff.easy;
+            challengeState = { ...challengeState, mode: 'sprint', running: false, waitingReferee: true, timeLeft: 30, wordsDone: 0, targetWord: list[Math.floor(Math.random() * list.length)], charIdx: 0 };
+            document.getElementById('challenge-arena').classList.remove('hidden');
+            document.getElementById('challenge-robot-track').classList.add('hidden');
+            document.getElementById('challenge-player-runner').style.marginLeft = '0%';
+            setTextSafe('challenge-mode-label', '⏱️ DÉFI SPRINT 30s');
+            setTextSafe('challenge-status-text', '30s • 0 mot');
+            setTextSafe('challenge-feedback', 'Regarde le premier mot ci-dessus et clique sur « 🚦 Donner le départ ! » quand tu es prêt.');
+            renderChallengeTarget();
+            showRefereeReadyPanel('Le chrono de 30 secondes démarrera uniquement quand tu cliqueras sur « Donner le départ » !');
+        }
+
+        function startRobotRaceChallenge() {
+            stopChallengeLoop();
+            const phrases = [
+                "le petit renard court sur la piste",
+                "mes dix doigts dansent sur le clavier",
+                "la fusee rouge depasse le robot de leo"
+            ];
+            challengeState = { ...challengeState, mode: 'robot', running: false, waitingReferee: true, robotProgress: 0, charIdx: 0, targetWord: phrases[Math.floor(Math.random() * phrases.length)] };
+            document.getElementById('challenge-arena').classList.remove('hidden');
+            document.getElementById('challenge-robot-track').classList.remove('hidden');
+            setTextSafe('challenge-mode-label', '🤖 COURSE CONTRE LE ROBOT');
+            setTextSafe('challenge-status-text', 'Prêt sur la ligne de départ');
+            document.getElementById('challenge-player-runner').style.marginLeft = '0%';
+            document.getElementById('challenge-robot-runner').style.marginLeft = '0%';
+            setTextSafe('challenge-feedback', 'Lis bien la phrase ci-dessus et clique sur « 🚦 Donner le départ ! » pour lancer le Robot !');
+            renderChallengeTarget();
+            showRefereeReadyPanel('Le Robot restera immobile sur la ligne tant que tu n’as pas cliqué sur « Donner le départ » !');
+        }
+
+        function handleChallengeKeystroke(key) {
+            if (!challengeState.running) return;
+            const exp = challengeState.targetWord[challengeState.charIdx];
+            if (!exp) return;
+            if (key.toLowerCase() === exp.toLowerCase()) {
+                playSound('key');
+                challengeState.charIdx++;
+                renderChallengeTarget();
+                if (challengeState.mode === 'sprint' && challengeState.charIdx >= challengeState.targetWord.length) {
+                    challengeState.wordsDone++;
+                    const words = ['chat', 'lune', 'renard', 'soleil', 'etoile', 'nuage', 'robot', 'dragon', 'magie'];
+                    challengeState.targetWord = words[Math.floor(Math.random() * words.length)];
+                    challengeState.charIdx = 0;
+                    renderChallengeTarget();
+                } else if (challengeState.mode === 'robot') {
+                    const pct = Math.round((challengeState.charIdx / challengeState.targetWord.length) * 90);
+                    document.getElementById('challenge-player-runner').style.marginLeft = `${pct}%`;
+                    if (challengeState.charIdx >= challengeState.targetWord.length) {
+                        stopChallengeLoop();
+                        playSound('win');
+                        const prof = getActiveProfile();
+                        setTextSafe('referee-badge', '🏆 VICTOIRE !');
+                        setTextSafe('challenge-status-text', '🏆 VICTOIRE !');
+                        document.getElementById('challenge-feedback').innerHTML = `🎉 <strong>Incroyable !</strong> Tu as battu le Robot de Léo à la course !`;
+                        speakFrench(`Incroyable ${prof.name} ! Tu as battu le robot de Léo à la course !`);
+                    }
+                }
+            } else {
+                playSound('error');
+            }
+        }
+
+        /* =========================================================================
+           INFO-BULLES & ÉCOUTE CLAVIER GLOBAL (INCLUANT ACCENTS ^ ET ¨)
+           ========================================================================= */
+        (function setupTooltips() {
+            const tip = document.getElementById('leo-tooltip');
+            if (!tip) return;
+            document.addEventListener('mouseover', (e) => {
+                if (!appState.tooltipsEnabled || !e.target || typeof e.target.closest !== 'function') return;
+                const el = e.target.closest('[data-help]');
+                if (!el) return;
+                setTextSafe('leo-tooltip-title', el.getAttribute('data-help-title') || 'Astuce de Léo');
+                setTextSafe('leo-tooltip-body', el.getAttribute('data-help') || '');
+                tip.classList.remove('hidden');
+                tip.style.left = `${Math.min(window.innerWidth - 280, e.clientX + 12)}px`;
+                tip.style.top = `${Math.min(window.innerHeight - 100, e.clientY + 14)}px`;
+            });
+            document.addEventListener('mouseout', (e) => {
+                if (e.target && typeof e.target.closest === 'function' && e.target.closest('[data-help]')) {
+                    tip.classList.add('hidden');
+                }
+            });
+        })();
+
+        window.onload = function () {
+            loadProgress();
+            renderMap();
+
+            let pendingAccent = null;
+            const hatMap = { 'a': 'â', 'e': 'ê', 'i': 'î', 'o': 'ô', 'u': 'û', 'A': 'Â', 'E': 'Ê', 'I': 'Î', 'O': 'Ô', 'U': 'Û' };
+
+            document.addEventListener('keydown', (e) => {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+                if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+                const splash = document.getElementById('modal-welcome-splash');
+                if (splash && !splash.classList.contains('hidden')) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startWelcomeAdventure(); }
+                    return;
+                }
+
+                if (activeScreen === 'challenges' && challengeState.waitingReferee && e.key === 'Enter') {
+                    e.preventDefault();
+                    triggerRefereeStart();
+                    return;
+                }
+
+                if (e.key === 'Dead' || e.key === '^') {
+                    pendingAccent = '^';
+                    return;
+                }
+
+                if (e.key.length !== 1) return;
+                e.preventDefault();
+                let ch = e.key;
+                if (pendingAccent === '^' && hatMap[ch]) ch = hatMap[ch];
+                pendingAccent = null;
+
+                if (activeScreen === 'practice' && document.getElementById('modal-victory').classList.contains('hidden')) {
+                    handlePracticeKeystroke(ch);
+                } else if (activeScreen === 'arcade' && arcadeState.running) {
+                    handleArcadeKeystroke(ch);
+                } else if (activeScreen === 'challenges' && challengeState.running) {
+                    handleChallengeKeystroke(ch);
+                }
+            });
+        };
+    </script>
+</body>
+</html>
